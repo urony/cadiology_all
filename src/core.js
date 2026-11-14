@@ -1,0 +1,244 @@
+'use strict';
+/* ===== הגדרות ===== */
+const CFG = {
+  STORE_KEY: 'cardiolab_v1',
+  TEACHER_STORE: 'cardiolab_teacher_v1',
+  TITLE: 'מעבדת הלב',
+};
+const QS = new URLSearchParams(location.search);
+/* מצב מורה נקבע בזמן הבנייה: קובץ המורה (teacher.html) נבנה עם TEACHER_BUILD, וקובץ התלמיד אינו כולל שום דרך להגיע אליו */
+const IS_TEACHER = (typeof TEACHER_BUILD !== 'undefined');
+const BAKED = (typeof BAKED_ONLY !== 'undefined') ? BAKED_ONLY : '';   // קובץ נפרד: נעול לחלק/משחק כבר בבנייה
+// נעילה לחלק/משחק מסוים: ?only=a  |  ?only=a,b  |  ?only=b_l1 (בקובץ תלמיד בלבד)
+const ONLY = IS_TEACHER ? [] : (QS.get('only') || BAKED).toLowerCase().split(',').map(x => x.trim()).filter(Boolean);
+const TPART = IS_TEACHER && /^[abc]$/.test(BAKED);   // קובץ מורה לחלק שלם
+const TGAME = IS_TEACHER && !!BAKED && !TPART;       // קובץ מורה למשחק בודד
+const TLOCK = TPART || TGAME;
+if (IS_TEACHER) CFG.STORE_KEY = 'cardiolab_teacher_play';   // משחק של המורה לא מתערבב עם נתוני תלמיד
+const LOCK = ONLY.length > 0;
+const IMG = (typeof IMG_DATA !== 'undefined') ? IMG_DATA : {};
+const ART = (typeof ART_DATA !== 'undefined') ? ART_DATA : {};
+
+/* ===== עזרים ===== */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+const rng = { f: Math.random };
+function shuffle(a, r = Math.random) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1));[a[i], a[j]] = [a[j], a[i]]; } return a; }
+const pick = (a, r = Math.random) => a[Math.floor(r() * a.length)];
+const between = (lo, hi, r = Math.random) => lo + (hi - lo) * r();
+const round = (x, d = 0) => { const m = Math.pow(10, d); return Math.round(x * m) / m; };
+
+function el(html) { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; }
+function on(root, ev, sel, fn) { root.addEventListener(ev, e => { const t = e.target.closest(sel); if (t && root.contains(t)) fn(e, t); }); }
+
+/* ===== אחסון מקומי (שם, התקדמות, טעויות נפוצות) ===== */
+const Store = {
+  d: { name: '', cls: '', games: {}, mistakes: {}, created: Date.now() },
+  load() { try { const s = localStorage.getItem(CFG.STORE_KEY); if (s) this.d = Object.assign(this.d, JSON.parse(s)); } catch (e) { } },
+  save() { try { localStorage.setItem(CFG.STORE_KEY, JSON.stringify(this.d)); } catch (e) { } },
+  setName(n, c) { this.d.name = n.trim().slice(0, 30); this.d.cls = (c || '').trim().slice(0, 12); this.save(); },
+  record(id, pct) {
+    const g = this.d.games[id] || { best: 0, attempts: 0 };
+    g.attempts++; g.best = Math.max(g.best, Math.round(pct)); g.last = Math.round(pct); g.ts = Date.now();
+    this.d.games[id] = g; this.save(); return g;
+  },
+  mistake(tag) { if (!tag) return; this.d.mistakes[tag] = (this.d.mistakes[tag] || 0) + 1; this.save(); },
+  stars(id) { const g = this.d.games[id]; if (!g) return 0; return g.best >= 90 ? 3 : g.best >= 70 ? 2 : g.best >= 40 ? 1 : 0; },
+  totalStars() { return Object.keys(this.d.games).reduce((s, k) => s + this.stars(k), 0); },
+  reset() { try { localStorage.removeItem(CFG.STORE_KEY); } catch (e) { } this.d = { name: '', cls: '', games: {}, mistakes: {}, created: Date.now() }; },
+};
+Store.load();
+
+/* קוד תוצאות – הילד שולח למורה (וואטסאפ/העתקה), והמורה מדביק בלוח שלו */
+const ResultCode = {
+  make() {
+    const g = {}; Object.keys(Store.d.games).forEach(k => { const x = Store.d.games[k]; g[k] = [x.best, x.attempts]; });
+    const o = { v: 1, n: Store.d.name || 'ללא שם', c: Store.d.cls || '', t: Date.now(), g, m: Store.d.mistakes };
+    return 'CL1:' + btoa(unescape(encodeURIComponent(JSON.stringify(o))));
+  },
+  parse(s) {
+    s = s.trim(); const i = s.indexOf('CL1:'); if (i < 0) return null;
+    const code = s.slice(i + 4).split(/\s/)[0];
+    try { const o = JSON.parse(decodeURIComponent(escape(atob(code)))); if (o && o.v === 1) return o; } catch (e) { }
+    return null;
+  },
+};
+
+/* ===== ממשק ===== */
+function toast(msg, ms = 2200) {
+  const t = el(`<div class="toast" role="status">${esc(msg)}</div>`); document.body.appendChild(t);
+  setTimeout(() => t.remove(), ms);
+}
+function modal(html, opts = {}) {
+  const bg = el(`<div class="modal-bg"><div class="modal" role="dialog" aria-modal="true">${html}</div></div>`);
+  bg.addEventListener('click', e => { if (e.target === bg && !opts.sticky) bg.remove(); });
+  document.body.appendChild(bg); return bg;
+}
+function lightbox(src) {
+  const lb = el(`<div class="lightbox"><button class="btn x">✕ סגירה</button><img src="${src}" alt=""></div>`);
+  lb.addEventListener('click', () => lb.remove()); document.body.appendChild(lb);
+}
+document.addEventListener('click', e => { const im = e.target.closest('.fig img, img.avatar, img.zoomable'); if (im) lightbox(im.src); });
+
+/* תוויות עבריות מעל/מתחת לאיורים חדשים: x,y באחוזים; row = שורת עמודות מתחת; legend = רשימה ממוספרת */
+const FIGX = {};
+function fig(name, cap) {
+  const src = IMG[name] || ('assets/' + name + '.webp'), X = FIGX[name];
+  const labels = X && X.labels ? X.labels.map(l => `<span class="figlb" style="left:${l[1]}%;top:${l[2]}%">${l[0]}</span>`).join('') : '';
+  const row = X && X.row ? `<div class="figrow">${X.row.map(r => `<div><b>${r[0]}</b><span>${r[1]}</span></div>`).join('')}</div>` : '';
+  const legend = X && X.legend ? `<div class="figleg">${X.lead ? `<span class="muted small">${X.lead}</span>` : ''}<ol>${X.legend.map(t => `<li>${t}</li>`).join('')}</ol></div>` : '';
+  const note = X && X.note ? `<div class="figleg small muted">${X.note}</div>` : '';
+  return `<figure class="fig"><div class="figwrap"><img loading="lazy" src="${src}" alt="${esc(cap || name)}">${labels}</div>${row}${legend}${note}<figcaption>${esc(cap || '')} · לחיצה להגדלה</figcaption></figure>`;
+}
+
+function mascotSVG(mood = 'happy') {
+  const mouths = {
+    happy: '<path d="M50 78 Q64 92 78 78" fill="none" stroke="#4a0d1c" stroke-width="4" stroke-linecap="round"/>',
+    wow: '<ellipse cx="64" cy="82" rx="7" ry="9" fill="#4a0d1c"/>',
+    think: '<path d="M52 82 Q64 78 78 84" fill="none" stroke="#4a0d1c" stroke-width="4" stroke-linecap="round"/>',
+    sad: '<path d="M52 86 Q64 72 78 86" fill="none" stroke="#4a0d1c" stroke-width="4" stroke-linecap="round"/>',
+    wink: '<path d="M50 78 Q64 92 78 78" fill="none" stroke="#4a0d1c" stroke-width="4" stroke-linecap="round"/>',
+  };
+  const eyeR = mood === 'wink' ? '<path d="M70 56 q7 -6 14 0" fill="none" stroke="#4a0d1c" stroke-width="4" stroke-linecap="round"/>' : '<circle cx="78" cy="58" r="7" fill="#fff"/><circle cx="79" cy="59" r="3.6" fill="#4a0d1c"/>';
+  const brow = mood === 'think' ? '<path d="M66 44 q10 -7 20 -1" stroke="#4a0d1c" stroke-width="3.5" fill="none" stroke-linecap="round"/>' : '';
+  return `<svg viewBox="0 0 120 120" role="img" aria-label="דמות הלב"><defs><radialGradient id="mg${mood}" cx="42%" cy="35%" r="75%"><stop offset="0" stop-color="#ff8fa3"/><stop offset=".55" stop-color="#e0405c"/><stop offset="1" stop-color="#a51c3a"/></radialGradient></defs>
+  <ellipse cx="62" cy="112" rx="30" ry="5" fill="rgba(0,0,0,.12)"/>
+  <path d="M60 106 C22 80 8 58 12 36 C16 14 44 8 60 28 C76 8 104 14 108 36 C112 58 98 80 60 106 Z" fill="url(#mg${mood})" stroke="#7e1d33" stroke-width="2"/>
+  <path d="M44 14 C36 4 26 6 24 14" fill="none" stroke="#7e1d33" stroke-width="5" stroke-linecap="round"/><path d="M76 14 C84 4 96 6 98 16" fill="none" stroke="#4d7cc9" stroke-width="5" stroke-linecap="round"/>
+  <ellipse cx="38" cy="34" rx="11" ry="6" fill="#fff" opacity=".28" transform="rotate(-25 38 34)"/>
+  <circle cx="46" cy="58" r="7" fill="#fff"/><circle cx="47" cy="59" r="3.6" fill="#4a0d1c"/>${eyeR.replace(/cx="78"/g, 'cx="74"').replace(/cx="79"/g, 'cx="75"').replace('M70 56 q7 -6 14 0', 'M66 56 q7 -6 14 0')}${brow}
+  <circle cx="46" cy="58" r="11" fill="none" stroke="#f0ab2e" stroke-width="2.4"/><circle cx="74" cy="58" r="11" fill="none" stroke="#f0ab2e" stroke-width="2.4"/><path d="M57 58 h6" stroke="#f0ab2e" stroke-width="2.4"/>
+  <circle cx="30" cy="74" r="5" fill="#ffd0d8" opacity=".55"/><circle cx="90" cy="74" r="5" fill="#ffd0d8" opacity=".55"/>${mouths[mood] || mouths.happy}</svg>`;
+}
+function mascot(mood = 'happy', cls = '') {
+  const a = ART['mascot_' + mood] || ART.mascot;
+  return `<div class="mascot ${cls}">${a ? `<img src="${a}" alt="דמות" style="width:100%">` : mascotSVG(mood)}</div>`;
+}
+function charImg(name, w = 84) { const a = ART[name]; return a ? `<div class="mascot" style="flex:0 0 ${w}px"><img src="${a}" alt="" style="width:100%;height:auto"></div>` : ''; }
+function say(text, mood = 'happy', who) { return `<div class="say">${(who && charImg(who)) || mascot(mood)}<div class="bubble">${text}</div></div>`; }
+
+(function injectConfettiCss() {
+  const s = document.createElement('style');
+  s.textContent = `.cf{position:fixed;top:-20px;z-index:120;font-size:22px;pointer-events:none;animation:cf 2.4s ease-in forwards}@keyframes cf{to{transform:translateY(105vh) rotate(540deg);opacity:.6}}`;
+  document.head.appendChild(s);
+})();
+function confetti(n = 22) {
+  if (matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+  const em = ['❤️', '⭐', '✨', '🎉', '💓', '🔬'];
+  for (let i = 0; i < n; i++) {
+    const s = document.createElement('span'); s.className = 'cf'; s.textContent = pick(em);
+    s.style.left = Math.random() * 100 + 'vw'; s.style.animationDelay = Math.random() * .6 + 's';
+    document.body.appendChild(s); setTimeout(() => s.remove(), 3200);
+  }
+}
+const starsHTML = n => `<span class="stars" aria-label="${n} כוכבים">${[1, 2, 3].map(i => `<span class="${i <= n ? '' : 'off'}">★</span>`).join('')}</span>`;
+
+/* ===== שאלה אמריקאית (MCQ) – רכיב משותף ===== */
+function mcq(parent, spec) {
+  const letters = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', 'י'];
+  let opts = spec.options.map((o, i) => ({ ...o, _i: i }));
+  if (spec.shuffle !== false) opts = shuffle(opts);
+  const box = el(`<div class="mcq"></div>`);
+  box.innerHTML = (spec.fig ? fig(spec.fig, spec.figCap) : '') + (spec.vis || '') + `<div class="q">${spec.q}</div>` +
+    `<div class="opts">${opts.map((o, i) => `<button class="opt ${IS_TEACHER && o.ok ? 't-ok' : ''}" data-i="${i}"><b>${letters[i]}.</b><span>${o.t}</span><span class="mk"></span></button>`).join('')}</div><div class="fb"></div>`;
+  parent.appendChild(box);
+  let done = false;
+  if (IS_TEACHER) {
+    const w = spec.options.find(o => o.ok);
+    if (w && w.why) box.querySelector('.fb').innerHTML = `<div class="tnote"><b>למורה – התשובה הנכונה:</b> ${w.why}</div>`;
+  }
+  box.addEventListener('click', e => {
+    const b = e.target.closest('.opt'); if (!b || done) return; done = true;
+    const o = opts[+b.dataset.i];
+    $$('.opt', box).forEach((x, i) => { x.disabled = true; const oo = opts[i]; if (oo.ok) { x.classList.add('ok'); $('.mk', x).textContent = '✓'; } });
+    if (!o.ok) { b.classList.add('no'); $('.mk', b).textContent = '✗'; Store.mistake(o.tag || spec.tag); }
+    const right = opts.find(x => x.ok);
+    const why = o.ok ? (o.why || '') : `${o.why ? o.why + '<br>' : ''}<b>התשובה הנכונה:</b> ${right.t}${right.why ? ' — ' + right.why : ''}`;
+    $('.fb', box).innerHTML = `<div class="explain ${o.ok ? 'good' : 'bad'}">${o.ok ? '✅ נכון! ' : '🤔 כמעט. '}${why}</div>`;
+    if (typeof Snd !== 'undefined') Snd.play(o.ok ? 'ok' : 'no');
+    if (o.ok) confettiSmall();
+    spec.onDone && spec.onDone(!!o.ok, o);
+  });
+  return box;
+}
+/* סרגל קפיצה בין מטופלים: ממספר 1..n, ✓ = כבר נענה */
+function jumpBar(n, cur, answered, go, lbl = 'מטופל') {
+  const bar = el(`<div class="row" style="gap:6px;flex-wrap:wrap;margin:6px 0" role="navigation" aria-label="מעבר בין פריטים">${Array.from({ length: n }, (_, i) => `<button type="button" class="btn small${i === cur ? ' primary' : ''}" data-j="${i}" style="min-width:40px;padding:6px 10px" aria-label="${lbl} ${i + 1}${answered[i] ? ', נענה' : ''}"${i === cur ? ' aria-current="true"' : ''}>${i + 1}${answered[i] ? ' ✓' : ''}</button>`).join('')}</div>`);
+  bar.onclick = e => { const b = e.target.closest('[data-j]'); if (b) go(+b.dataset.j); };
+  return bar;
+}
+function confettiSmall() { if (Math.random() < .25) confetti(6); }
+
+/* ריצת חידון – מספר שאלות ברצף */
+function runQuiz(root, ctx, items, o = {}) {
+  let cur = 0;
+  const res = items.map(() => null), cards = [];   // res[i]: null = לא נענתה, true/false = תשובה ראשונה
+  const host = el(`<div></div>`); root.appendChild(host);
+  const nextUn = from => { for (let k = 1; k <= items.length; k++) { const j = (from + k) % items.length; if (res[j] == null) return j; } return -1; };
+  function step() {
+    host.innerHTML = '';
+    const right = res.filter(x => x === true).length, nAns = res.filter(x => x != null).length;
+    host.append(
+      el(`<div class="row sp small muted" style="margin-bottom:8px"><span>שאלה ${cur + 1} מתוך ${items.length}</span><span>✓ ${right}</span></div>`),
+      el(`<div class="bar" style="margin-bottom:8px"><i style="width:${100 * nAns / items.length}%"></i></div>`),
+      jumpBar(items.length, cur, res.map(x => x != null), j => { cur = j; step(); window.scrollTo(0, 0); }, 'שאלה'));
+    if (!cards[cur]) {
+      const k = cur, card = el(`<div class="card" style="margin-top:8px"></div>`); cards[k] = card;
+      mcq(card, { ...items[k], onDone: ok => {
+        res[k] = ok;
+        const nxt = nextUn(k), last = nxt < 0;
+        const nx = el(`<button class="btn primary block" style="margin-top:14px">${last ? 'לסיכום 🏁' : 'הבא ←'}</button>`);
+        nx.onclick = () => { const nxt = nextUn(k), last = nxt < 0; if (last) ctx.finish(Math.round(100 * res.filter(x => x === true).length / items.length), o.after || ''); else { cur = nxt; step(); window.scrollTo(0, 0); } };
+        card.appendChild(nx); step(); nx.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      } });
+    }
+    host.appendChild(cards[cur]);
+  }
+  step();
+}
+
+/* ===== רישום משחקים ===== */
+const GAMES = [];
+function registerGame(g) { GAMES.push(g); }
+function gameById(id) { return GAMES.find(g => g.id === id); }
+
+function makeCtx(game, root) {
+  return {
+    game, root, teacher: IS_TEACHER,
+    finish(pct, extra = '') {
+      const rec = Store.record(game.id, pct);
+      const st = Store.stars(game.id);
+      const msg = pct >= 90 ? ['מושלם! אתם מדהימים 🎉', 'wow'] : pct >= 70 ? ['כל הכבוד – ממש מצוין!', 'happy'] : pct >= 40 ? ['יפה! עוד סיבוב ותהיו שם.', 'wink'] : ['לא נורא – טעויות הן הדרך ללמוד. נסו שוב!', 'think'];
+      if (pct >= 70) { confetti(); Snd.play('win'); } else Snd.play('no');
+      root.innerHTML = `<div class="card victory">${mascot(msg[1], 'hero-m')}<h2>${pct}%</h2><div style="font-size:1.8rem;color:var(--gold)">${'★'.repeat(st)}${'☆'.repeat(3 - st)}</div><p>${msg[0]}</p><div class="muted small">שיא אישי: ${rec.best}% · ניסיונות: ${rec.attempts}</div></div>${extra}
+      ${IS_TEACHER ? '' : expertCard(pct)}${!IS_TEACHER ? `<button class="btn block certbtn" data-act="cert" style="margin-top:8px">🎓 ${pct >= 70 ? 'לחצו להפקת תעודת הצטיינות' : 'לחצו להפקת תעודת השתתפות'}</button>` : ''}
+      ${game.learned && game.learned.length ? `<div class="card learned"><h3>📚 מה למדנו</h3><ul>${game.learned.map(x => `<li>${x}</li>`).join('')}</ul></div>` : ''}
+      <div class="row" style="margin-top:6px"><button class="btn primary grow" data-act="again">🔁 שוב</button><button class="btn grow" data-act="back">חזרה לרשימה</button></div>`;
+      $('.hero-m', root) && ($('.hero-m', root).style.cssText = 'width:110px;margin:0 auto 8px');
+      const self = this; $$('[data-act]', root).forEach(t => t.onclick = () => { if (t.dataset.act === 'cert') { certModal(game, pct, self.rank || null); return; } if (t.dataset.act === 'again') { root.innerHTML = ''; game.mount(root, makeCtx(game, root)); } else location.hash = '#/' + game.part.toLowerCase(); });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+  };
+}
+function mountGame(id, root) {
+  const g = gameById(id); if (!g) { root.innerHTML = '<p>המשחק לא נמצא.</p>'; return; }
+  root.innerHTML = '';
+  const hdr = el(`<div><button class="back" data-back>→ חזרה</button><div class="row" style="margin-bottom:8px"><span style="font-size:2rem">${g.icon}</span><div><h2 style="margin:0">${g.title}</h2><div class="muted small">${g.desc}</div></div></div></div>`);
+  const body = el(`<div id="game-body"></div>`);
+  root.append(hdr, body);
+  hdr.querySelector('[data-back]').onclick = () => location.hash = '#/' + g.part.toLowerCase();
+  if (TGAME) hdr.querySelector('[data-back]').remove();
+  if (!IS_TEACHER) { const rb = el('<button class="btn small" style="margin-bottom:8px">🔁 התחל מחדש</button>'); hdr.appendChild(rb); rb.onclick = () => { try { localStorage.removeItem('cardiolab_seen_' + id); localStorage.removeItem('cardiolab_b_' + id); } catch (e) { } mountGame(id, root); window.scrollTo(0, 0); }; }
+  if (IS_TEACHER && g.teacherNote) body.appendChild(el(`<div class="tnote"><b>הערה למורה:</b> ${g.teacherNote}</div>`));
+  if (IS_TEACHER) { teacherGameView(g, body, makeCtx); return; }
+  const start = comp => { body.innerHTML = ''; const ctx = makeCtx(g, body); if (comp) attachComp(ctx, g, hdr); g.mount(body, ctx); const gs = guideSay(g.id); if (gs && !body.querySelector('.say')) body.insertAdjacentHTML('afterbegin', gs); };
+  if (g.part === 'B' || g.part === 'C') {
+    const ch = el(`<div class="card center"><h3 style="margin-top:0">איך תרצו לשחק?</h3><div class="row"><button class="btn primary grow" data-m="0">▶ משחק רגיל</button><button class="btn grow" data-m="1">⏱️ מצב תחרות</button></div>${compRules(g)}</div>`);
+    body.appendChild(ch); ch.onclick = e => { const b = e.target.closest('[data-m]'); if (b) start(b.dataset.m === '1'); };
+  } else start(false);
+}
