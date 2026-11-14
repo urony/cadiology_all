@@ -2,8 +2,8 @@
 /* ===== חלק ב׳ – אבחון מא.ק.ג ומבדיקות דם =====
    המטופלים נוצרים אקראית (labgen.js). שלוש רמות: קלאסי, ערכים בגבולות (והתלונה מוסתרת), ובחירת הבדיקה הבאה. */
 const PANEL_ITEMS = { chem: ['TROP', 'GLU', 'K', 'NA', 'CREA', 'Hb'], basic: ['GLU', 'K', 'NA', 'CREA', 'Hb'], lipid: ['TCHOL', 'LDL', 'HDL', 'TG'], trop: ['TROP'] };
-const PANEL_TITLE = { chem: 'כימיה בדם: טרופונין, סוכר, אלקטרוליטים', basic: 'בדיקות דם בסיסיות', lipid: 'פרופיל שומנים בדם', trop: 'טרופונין', ecg: 'א.ק.ג', stress: 'מבחן מאמץ (א.ק.ג בשיא המאמץ)' };
-const PANEL_TUBE = { chem: 'tube_gold', basic: 'tube_gold', lipid: 'tube_gold', trop: 'tube_gold', ecg: 'ecg', stress: 'ecg' };
+const PANEL_TITLE = { chem: 'כימיה בדם: טרופונין, סוכר, אלקטרוליטים', basic: 'בדיקות דם בסיסיות', lipid: 'פרופיל שומנים בדם', trop: 'טרופונין', ecg: 'א.ק.ג', stress: 'מבחן מאמץ (א.ק.ג בשיא המאמץ)', scan: 'מיפוי לב' };
+const PANEL_TUBE = { chem: 'tube_gold', basic: 'tube_gold', lipid: 'tube_gold', trop: 'tube_gold', ecg: 'ecg', stress: 'ecg', scan: 'ecg' };
 const TUBE_NAME = { tube_gold: 'צינורית צהובה', ecg: 'מכשיר א.ק.ג' };
 const TUBE_EMOJI = { tube_gold: '🟡', ecg: '📈' };
 const INFO = {
@@ -17,14 +17,15 @@ const INFO = {
   sa: { key: ['TROP', 'LDL'], pts: ['א.ק.ג במנוחה תקין וטרופונין תקין: אין נזק קבוע לשריר.', 'במבחן מאמץ מופיעה ירידה במקטע ST: שריר הלב לא מקבל מספיק חמצן כשהוא עובד יותר.', 'הכאב במאמץ שחולף במנוחה הוא האופיין של תעוקה יציבה.'] },
   hyperlip: { key: ['TCHOL', 'LDL', 'HDL', 'TG'], pts: ['LDL גבוה (רצוי מתחת ל-100) ו-HDL נמוך: גורמי סיכון לטרשת עורקים.', 'הא.ק.ג והטרופונין תקינים, ובמבחן מאמץ אין שינוי: אין כרגע מחלת לב, אלא גורם סיכון.', 'הטיפול והמניעה: תזונה, פעילות גופנית, ולעיתים סטטינים.'] },
 };
-const NEXT_OK = { stemi: ['ecg', 'trop'], nstemi: ['ecg', 'trop'], ua: ['ecg', 'trop'], sa: ['stress', 'ecg'], af: ['ecg', 'holter'], vf: ['ecg'], sinus_tachy: ['ecg'], sinus_brady: ['ecg', 'holter'], hyperlip: ['lipid'] };
-const NEXT_OPTS = { ecg: 'א.ק.ג', trop: 'בדיקת טרופונין', lipid: 'פרופיל שומנים בדם', stress: 'מבחן מאמץ', holter: 'הולטר (א.ק.ג ממושך)', echo: 'אקו לב' };
+const NEXT_OK = { stemi: ['ecg', 'trop'], nstemi: ['ecg', 'trop'], ua: ['ecg', 'trop'], sa: ['stress', 'scan', 'ecg'], af: ['ecg', 'holter'], vf: ['ecg'], sinus_tachy: ['ecg'], sinus_brady: ['ecg', 'holter'], hyperlip: ['lipid'] };
+const NEXT_OPTS = { ecg: 'א.ק.ג', trop: 'בדיקת טרופונין', lipid: 'פרופיל שומנים בדם', stress: 'מבחן מאמץ', holter: 'הולטר (א.ק.ג ממושך)', echo: 'אקו לב', scan: 'מיפוי לב' };
 const NEXT_WHY = {
   ecg: 'הבדיקה הראשונה בכאב בחזה, בדפיקות לב ובסחרחורת: מראה במהירות קצב, הרמה או ירידה בא.ק.ג.',
   trop: 'מבדילה בין תעוקה (טרופונין תקין) לאוטם (טרופונין גבוה), בחשד לאיסכמיה.',
   lipid: 'מתאימה כשאין תלונות אבל יש חשד לגורמי סיכון: מראה LDL, HDL וטריגליצרידים.',
   stress: 'מתאימה כשהא.ק.ג במנוחה תקין והכאב מופיע במאמץ: מגלה איסכמיה שמופיעה רק כשהלב עובד קשה.',
   holter: 'מתאימה להפרעות קצב שמופיעות ונפסקות: מקליט א.ק.ג לאורך שעות או ימים.',
+  scan: 'בודק את זרימת הדם אל שריר הלב ומגלה אזורים שמקבלים פחות דם. מתאים כשצריך לברר איסכמיה, למשל אחרי מבחן מאמץ לא חד-משמעי.',
   echo: 'מראה את מבנה הלב ואת איכות ההתכווצות (שימושי באי-ספיקה ואחרי אוטם), אך אינה הצעד הראשון כאן.',
 };
 const DXOPT_B = k => `${CT[k].ic} ${CT[k].n}`;
@@ -52,6 +53,7 @@ function stressCard(p) {
 }
 function holterCard(p) { const t = p.type === 'af' ? 'נמצאו התקפים חוזרים של קצב לא סדיר ללא גלי P (פרפור פרוזדורים).' : p.type === 'sinus_brady' ? 'קצב סינוס איטי לאורך היממה, ללא הפרעות קצב אחרות.' : 'לא נמצאו הפרעות קצב משמעותיות.'; return panelCard(p, 'ecg', `<p><b>${t}</b></p>`, 'הולטר: הקלטה ממושכת'); }
 function echoCard(p) { const m = { stemi: 'אזור בדופן החדר השמאלי שאינו מתכווץ כראוי.', nstemi: 'ירידה קלה בהתכווצות באזור מוגבל בחדר השמאלי.', af: 'עלייה שמאלית מורחבת. החדרים מתכווצים היטב.', sa: 'מבנה הלב וההתכווצות תקינים במנוחה.' }; return panelCard(p, 'ecg', `<p><b>${m[p.type] || 'מבנה הלב והתכווצותו תקינים.'}</b></p>`, 'אקו לב'); }
+function scanCard(p) { const m = { sa: 'ירידה בזרימת הדם לאזור בשריר הלב בזמן מאמץ, שחוזרת לתקינות במנוחה.', ua: 'אזור בשריר הלב עם ירידה בזרימת הדם.', stemi: 'אזור בשריר הלב עם זרימת דם חסרה.', nstemi: 'אזור בשריר הלב עם זרימת דם חסרה.' }; return panelCard(p, 'scan', `<p><b>${m[p.type] || 'זרימת הדם אל שריר הלב תקינה.'}</b></p>`, 'מיפוי לב'); }
 function allPanels(p, hl = []) { resetLabNote(); return ecgCard(p) + chemCard(p, 'chem', hl) + chemCard(p, 'lipid', hl) + (p.stress ? stressCard(p) : ''); }
 
 function feedbackDxB(p, chosen) {
@@ -144,7 +146,7 @@ function runLabRounds(root, ctx, mode, types) {
       const ok = NEXT_OK[type];
       mcq(q, { q: 'מה הבדיקה הבאה שתבקשו: זו שתקדם הכי הרבה את האבחנה?', tag: 'next_test', options: Object.keys(NEXT_OPTS).map(k => ({ t: NEXT_OPTS[k], ok: ok.includes(k), why: NEXT_WHY[k], _k: k })), onDone: (okN, o) => {
         const best = ok[0];
-        const show = k => k === 'ecg' ? ecgCard(p) : k === 'trop' ? (resetLabNote(), chemCard(p, 'trop')) : k === 'lipid' ? (resetLabNote(), chemCard(p, 'lipid')) : k === 'stress' ? stressCard(p) : k === 'holter' ? holterCard(p) : echoCard(p);
+        const show = k => k === 'ecg' ? ecgCard(p) : k === 'trop' ? (resetLabNote(), chemCard(p, 'trop')) : k === 'lipid' ? (resetLabNote(), chemCard(p, 'lipid')) : k === 'stress' ? stressCard(p) : k === 'holter' ? holterCard(p) : k === 'scan' ? scanCard(p) : echoCard(p);
         let rev = okN ? '' : `<div class="explain bad">הבדיקה שתועיל הכי הרבה כאן: <b>${NEXT_OPTS[best]}</b></div>`;
         rev += show(o._k); if (!okN) rev += show(best);
         if (!ok.includes('ecg') || (o._k !== 'ecg' && best !== 'ecg')) { /* בדיקות נוספות לא נחשפות, כדי לא לתת את הכול */ }
