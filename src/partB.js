@@ -62,7 +62,10 @@ function stressCard(p) {
   return panelCard(p, 'stress', `<div style="padding:4px 0">${ecgTrace({ type: p.stress === 'std' ? 'stress_std' : 'sinus', hr: 135, seed: p.ecg.seed + 5 }, { sec: 4.2, label: 'א.ק.ג במאמץ' })}</div><p class="small" style="margin:6px 0 0"><b>${p.stress === 'std' ? 'ירידה במקטע ST בשיא המאמץ.' : 'ללא שינויים במקטע ST בשיא המאמץ.'}</b></p>`);
 }
 function holterCard(p) { const t = p.type === 'af' ? 'נמצאו התקפים חוזרים של קצב לא סדיר ללא גלי P (פרפור פרוזדורים).' : p.type === 'sinus_brady' ? 'קצב סינוס איטי לאורך היממה, ללא הפרעות קצב אחרות.' : 'לא נמצאו הפרעות קצב משמעותיות.'; return panelCard(p, 'ecg', `<p><b>${t}</b></p>`, 'הולטר: הקלטה ממושכת'); }
-function echoCard(p) { const m = { stemi: 'אזור בדופן החדר השמאלי שאינו מתכווץ כראוי.', nstemi: 'ירידה קלה בהתכווצות באזור מוגבל בחדר השמאלי.', af: 'עלייה שמאלית מורחבת. החדרים מתכווצים היטב.', sa: 'מבנה הלב וההתכווצות תקינים במנוחה.' }; return panelCard(p, 'ecg', `<p><b>${m[p.type] || 'מבנה הלב והתכווצותו תקינים.'}</b></p>`, 'אקו לב'); }
+/* תמונת תוצאה של בדיקת דימות, בולטת בכרטיס הבדיקה */
+function imgResult(key, cap) { return key && ART[key] ? `<figure class="imgres"><img class="zoomable" src="${ART[key]}" alt="${cap}"><figcaption>${cap} (לחצו להגדלה)</figcaption></figure>` : ''; }
+function echoCard(p) { const m = { stemi: 'אזור בדופן החדר השמאלי שאינו מתכווץ כראוי.', nstemi: 'ירידה קלה בהתכווצות באזור מוגבל בחדר השמאלי.', af: 'עלייה שמאלית מורחבת. החדרים מתכווצים היטב.', sa: 'מבנה הלב וההתכווצות תקינים במנוחה.' }; const img = p.type === 'af' ? 'echo_la_dilated' : (p.type === 'stemi' || p.type === 'nstemi') ? null : 'echo_normal';   /* באוטם הממצא הוא תנועת דופן, ותמונה סטטית לא יכולה להראות אותו */
+  return panelCard(p, 'ecg', `${imgResult(img, 'אקו לב: מבט ארבעה חללים')}<p><b>${m[p.type] || 'מבנה הלב והתכווצותו תקינים.'}</b></p>`, 'אקו לב'); }
 function scanCard(p) { const m = { sa: 'ירידה בזרימת הדם לאזור בשריר הלב בזמן מאמץ, שחוזרת לתקינות במנוחה.', ua: 'אזור בשריר הלב עם ירידה בזרימת הדם.', stemi: 'אזור בשריר הלב עם זרימת דם חסרה.', nstemi: 'אזור בשריר הלב עם זרימת דם חסרה.' }; return panelCard(p, 'scan', `<p><b>${m[p.type] || 'זרימת הדם אל שריר הלב תקינה.'}</b></p>`, 'מיפוי לב'); }
 function allPanels(p, hl = []) { resetLabNote(); return ecgCard(p) + chemCard(p, 'chem', hl) + chemCard(p, 'lipid', hl) + (p.stress ? stressCard(p) : ''); }
 

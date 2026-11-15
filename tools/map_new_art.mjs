@@ -12,6 +12,7 @@ const MAP = [
   ['6d37c8ca', 'anat_conduction', 900], 
   ['e30e1ec9', 'plaque_1', 640], ['54b67e24', 'plaque_2', 640], ['c7844214', 'plaque_3', 640], ['da9f7ce6', 'plaque_4', 640],
   ['חתך בלב', 'heart_cut', 1000], ['כלליים ועוד', 'heart_coronary', 1000], ['angio_normal', 'angio_normal', 700], ['angio_stenosis', 'angio_stenosis', 700], ['stress_test', 'stress_test', 700], ['holter', 'holter', 600], ['stent', 'stent', 700], ['CABG', 'cabg', 700],
+  ['xray_cardiomegaly', 'xray_cardiomegaly', 800], ['echo_la_dilated', 'echo_la_dilated', 800], ['echo_rv_ivc', 'echo_rv_ivc', 800], ['badge_1', 'badge_1', 420, 'round'], ['badge_2', 'badge_2', 420, 'round'], ['badge_3', 'badge_3', 420, 'round'],
   ['e9dd1af4', 'mi_heart', 800], ['e2505d80', 'body_athero', 800],
   ['57d80a38', 'echo_normal', 800], ['a45dcd8f', 'echo_dilated', 800],
   ['b115bae3', 'xray_normal', 800], ['f76eb3e5', 'xray_edema', 800],
@@ -22,10 +23,12 @@ const MAP = [
   ['ff62ab28', 'exam_c4', 800], ['01eed9e8', 'exam_c8', 800], ['02a344e2', 'exam_c9', 800],
 ];
 const files = fs.readdirSync(src);
-for (const [pre, name, w] of MAP) {
+const only = process.argv.slice(2);   // אפשר להריץ רק על שמות מסוימים: node tools/map_new_art.mjs badge_1 badge_2
+for (const [pre, name, w, mode] of MAP) {
+  if (only.length && !only.includes(name)) continue;
   const f = files.find(x => x.startsWith(pre));
   if (!f) { console.log('חסר:', pre, name); continue; }
   const out = path.join(root, 'art', name + '.webp');
-  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', path.join(src, f), '-vf', `scale='min(${w},iw)':-2`, '-quality', '82', out]);
+  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', path.join(src, f), '-vf', mode === 'round' ? `scale=${w}:${w},format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='255*clip(${Math.round(w * .21)}+0.5-hypot(max(abs(X-W/2)-(W/2-${Math.round(w * .21)}),0),max(abs(Y-H/2)-(H/2-${Math.round(w * .21)}),0)),0,1)'` : `scale='min(${w},iw)':-2`, '-quality', '82', out]);
   console.log(name, Math.round(fs.statSync(out).size / 1024) + ' KB');
 }

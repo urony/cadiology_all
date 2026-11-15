@@ -171,6 +171,11 @@ function caseLabs(c) {
   Object.keys(v).forEach(k => { if (LAB[k]) v[k] = round(v[k], LAB[k].d); });
   return { sex: c.sex, vals: v, ecg: c.ecg, stress: c.stress || null };
 }
+/* איזו תמונה מציגים לכל בדיקת דימות. מטופל עם ממצא שאין לו תמונה מתאימה (למשל אוטם באקו) מקבל טקסט בלבד */
+const RES_IMG = { echo: { c3: 'echo_la_dilated', c4: 'echo_dilated', c9: 'echo_rv_ivc' }, xray: { c4: 'xray_edema', c9: 'xray_cardiomegaly' }, ct: { c8: 'ct_normal' } };
+const RES_IMG_NORMAL = { echo: 'echo_normal', xray: 'xray_normal' };
+const RES_IMG_CAP = { echo: 'אקו לב: מבט ארבעה חללים', xray: 'צילום חזה', ct: 'CT מוח' };
+function resImg(c, k) { const m = RES_IMG[k]; const key = (m && m[c.id]) || (!(c.res && c.res[k]) && RES_IMG_NORMAL[k]) || null; return imgResult(key, RES_IMG_CAP[k]); }
 function testHTML(c, p, k) {
   _labNoteShown = false;
   const R = c.res || {};
@@ -182,10 +187,10 @@ function testHTML(c, p, k) {
     case 'inr': return labRows(['INR'], p.vals, p.sex);
     case 'stress': return `${ecgTrace({ type: p.stress === 'std' ? 'stress_std' : 'sinus', hr: 135, seed: c.ecg.seed + 3 }, { sec: 4.2, label: 'א.ק.ג במאמץ' })}<p><b>${R.stress || 'ללא שינויים במקטע ST בשיא המאמץ.'}</b></p>`;
     case 'holter': return `<p><b>${R.holter || 'לא נמצאו הפרעות קצב משמעותיות.'}</b></p>`;
-    case 'echo': return `<p><b>${R.echo || 'מבנה הלב והתכווצותו תקינים.'}</b></p>`;
+    case 'echo': return `${resImg(c, 'echo')}<p><b>${R.echo || 'מבנה הלב והתכווצותו תקינים.'}</b></p>`;
     case 'scan': return `<p><b>${R.scan || 'זרימת הדם אל שריר הלב תקינה.'}</b></p>`;
-    case 'xray': return `<p><b>${R.xray || 'חזה תקין.'}</b></p>`;
-    case 'ct': return `<p><b>${R.ct || 'ללא ממצא חריג.'}</b></p>`;
+    case 'xray': return `${resImg(c, 'xray')}<p><b>${R.xray || 'חזה תקין.'}</b></p>`;
+    case 'ct': return `${resImg(c, 'ct')}<p><b>${R.ct || 'ללא ממצא חריג.'}</b></p>`;
   }
   return '';
 }
@@ -239,7 +244,7 @@ function runShift(root, ctx, ids, t0 = '21:00', opt = {}) {
     P.talk.innerHTML = `<p class="muted small" style="margin-top:0">מה המטופל/ת מספר/ת:</p>${histAll.map(h => `<div class="qa"><span class="muted small">${h[0]}</span><br>${h[1]}</div>`).join('')}`;
     P.exam.innerHTML = `${ART['exam_' + c.id] ? `<figure id="exi" style="margin:0 0 12px"><img class="zoomable" src="${ART['exam_' + c.id]}" alt="ממצאי הבדיקה הגופנית" style="width:100%;border-radius:14px"><figcaption class="small muted" style="margin-top:6px">${EXAMCAP[c.id] || ''}</figcaption></figure>` : ''}<ul id="exl" style="padding-inline-start:20px;margin:0">${c.exam.map(x => `<li style="margin:6px 0">${x}</li>`).join('')}</ul>`;
     const shown = Object.keys(TESTS).filter(k => c.must.includes(k) || c.useful.includes(k));
-    P.tests.innerHTML = `<div id="res">${shown.map(k => `<div class="slip"><b>${TESTS[k].ic} ${TESTS[k].n}</b>${testHTML(c, p, k)}</div>`).join('')}</div>`;
+    P.tests.innerHTML = `<div id="res">${shown.map(k => `<div class="slip${['echo', 'xray', 'ct'].includes(k) ? ' imgslip' : ''}"><b>${TESTS[k].ic} ${TESTS[k].n}</b>${testHTML(c, p, k)}</div>`).join('')}</div>`;
     P.dx.innerHTML = '<p class="muted small">אחרי שאספתם מספיק מידע: אבחנו. אפשר לחזור ללשוניות הקודמות בכל עת.</p>';
     const dxHost = el('<div></div>'); P.dx.appendChild(dxHost);
     const dxBtn = el('<button class="btn primary block" id="startdx">אני מוכן/ה לאבחן ←</button>'); P.dx.appendChild(dxBtn);
