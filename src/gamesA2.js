@@ -37,6 +37,7 @@ registerGame({
   teacherNote: 'סעיף 2.1: SA, AV, צרור היס, צרורות הולכה ימני ושמאלי, סיבי פורקינייה (דרישה: זכירת השמות הלועזיים וזיהוי בתרשים). שלבים: סימולציה צעד-צעד, סידור, שאלות.',
   mount(root, ctx) {
     root.insertAdjacentHTML('afterbegin', say('אני לא צריך שום מוח כדי לפעום: יש לי קוצב משלי. בואו נעקוב אחרי האות.', 'happy'));
+    root.insertAdjacentHTML('beforeend', artFigs([['anat_conduction', 'מערכת ההולכה: קוצב SA בעלייה הימנית, צומת AV, צרור היס, ענפי הצרור וסיבי פורקינייה']]));
     runStages(root, ctx, [
       { title: 'האות בדרך', run: (box, done) => condSim(box, done) },
       { title: 'סדרו את המסלול', run: (box, done) => orderGame(box, { tag: 'conduction', hint: 'סדרו את מסלול האות החשמלי, מההתחלה ועד התכווצות החדרים.', steps: ['קוצב הלב הראשי (SA)', 'קוצב משני (AV)', 'צרור היס', 'צרורות הולכה ימני ושמאלי', 'סיבי פורקינייה'], onDone: done }) },
