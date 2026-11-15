@@ -77,6 +77,9 @@ function useImage(key, img, ratio, maxW, pts) {
 useImage('chambers', 'heart_cut', 1, 440, [[29, 41], [34, 78], [66, 38], [72, 75], [52, 72]]);
 useImage('valves', 'heart_cut', 1, 460, [[29, 60], [68, 54], [54, 52], [43, 48]]);
 useImage('vessels', 'heart_cut', 1, 440, [[45, 11], [55, 27], [24, 25], [20, 86], [84, 33]]);
+/* תמונה אחת עם כל המבנים: חדרים, עליות, מחיצה, מסתמים וכלי דם גדולים (הנקודות של שלוש הקבוצות על אותו חתך) */
+LABEL_SETS.heart = { img: 'heart_cut', ratio: 1, maxW: 540, title: 'חתך הלב: כל המבנים', tag: 'heart_anat', parts: [...LABEL_SETS.chambers.parts, ...LABEL_SETS.valves.parts, ...LABEL_SETS.vessels.parts] };
+delete LABEL_SETS.chambers; delete LABEL_SETS.valves; delete LABEL_SETS.vessels;
 LABEL_SETS.coronary = { img: 'heart_coronary', ratio: 1, maxW: 440, title: 'העורקים והוורידים הכליליים', tag: 'coronary', parts: [
   { l: 'אבי העורקים', e: 'Aorta', ha: ['אבי עורקים', 'אאורטה'], x: 47, y: 15, d: 'מכאן יוצאים העורקים הכליליים, מיד אחרי מסתם אבי העורקים.' },
   { l: 'עורק הריאה', e: 'Pulmonary artery', ha: ['עורקי הריאה', 'עורק ריאתי'], ea: ['pulmonary trunk'], x: 60, y: 22, d: 'יוצא מהחדר הימני אל הריאות. העורק הכלילי השמאלי עובר מאחוריו.' },

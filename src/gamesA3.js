@@ -184,20 +184,25 @@ registerGame({
 function arrHeartSim(box, done) {
   const host = el('<div class="card"></div>'); box.appendChild(host);
   const TXT = {
-    sinus: ['קצב סינוס תקין', 'האות יוצא מצומת SA, העליות מתכווצות, ואחריהן החדרים, בתיאום. בכל פעימה יוצא דם אל הגוף.'],
-    af: ['פרפור פרוזדורים', 'העליות רועדות במקום להתכווץ, והחדרים מקבלים אותות לא סדירים ולכן פועמים בקצב לא סדיר. הדם בעליות כמעט עומד ויכולים להיווצר בו קרישים. החדרים עדיין שואבים דם, ולכן המטופל לרוב בהכרה.'],
-    vf: ['פרפור חדרים', 'החדרים רועדים בלי התכווצות מתואמת, ולכן לא יוצא דם מהלב. זה דום לב: בלי החייאה והלם חשמלי (דפיברילטור) המטופל מאבד הכרה ומת.'],
+    sinus: ['קצב סינוס תקין', 'האות החשמלי יוצא מצומת SA בעלייה הימנית, עובר בעליות (הן מתכווצות), מחכה רגע, ואז יורד אל החדרים (הם מתכווצים ודוחפים דם החוצה). בכל פעימה יוצאת מנה של דם אל הגוף.'],
+    af: ['פרפור פרוזדורים', 'בעליות נוצרים הרבה אותות חשמליים בבת אחת, והן רועדות במקום להתכווץ. החדרים מקבלים אותות לא סדירים ולכן פועמים בלי קצב קבוע. עדיין יוצא דם מהחדרים, ולכן המטופל בדרך כלל בהכרה. הדם בעליות כמעט עומד, ולכן אפשר שייווצרו בו קרישים.'],
+    vf: ['פרפור חדרים', 'בחדרים נוצרים אותות חשמליים כאוטיים. החדרים רועדים ולא מתכווצים יחד, ולכן לא יוצא דם מהלב בכלל. זה דום לב: בלי החייאה והלם חשמלי (דפיברילטור) המטופל מאבד הכרה ומת.'],
   };
-  let mode = 'sinus', raf = 0, t0 = performance.now(), nextBeat = 0, beatAt = -9, flash = 0, count = 0;
+  let mode = 'sinus', raf = 0, t0 = performance.now(), nextBeat = 0, beatAt = -1e9, count = 0, sparkAt = 0;
   const shape = (id, cx, cy, rx, ry, fill) => `<ellipse id="${id}" cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${fill}" stroke="#7a2a33" stroke-width="3" data-c="${cx} ${cy}"/>`;
+  const sw = (c, t) => `<span style="display:inline-flex;align-items:center;gap:6px"><i style="width:14px;height:14px;border-radius:50%;background:${c};border:2px solid #fff;box-shadow:0 0 0 1.5px #b9a09a;display:inline-block"></i>${t}</span>`;
   host.innerHTML = `<p class="instr">בחרו מצב והסתכלו איך הלב מתנהג. אפשר להחליף בכל רגע.</p>
+    <div class="row" style="flex-wrap:wrap;gap:14px;margin:0 0 6px;font-size:.92rem">${sw('#f0ab2e', 'נקודה צהובה: אות חשמלי')}${sw('#d83a4a', 'טיפה אדומה: דם שיוצא מהלב אל הגוף')}</div>
     <svg viewBox="0 0 300 250" class="co-svg" role="img" aria-label="אנימציה של לב בקצב תקין, בפרפור פרוזדורים ובפרפור חדרים">
-      <path d="M150,20 V52" stroke="#d83a4a" stroke-width="14" stroke-linecap="round"/>
-      ${shape('hra', 108, 92, 44, 38, '#9fb8ec')}${shape('hla', 192, 92, 44, 38, '#f1a2a9')}${shape('hrv', 112, 172, 46, 54, '#4a7bd0')}${shape('hlv', 190, 172, 50, 58, '#d83a4a')}
-      <g font-size="11" fill="#3a2a2e" text-anchor="middle" opacity=".75"><text x="108" y="122">עלייה ימנית</text><text x="192" y="122">עלייה שמאלית</text><text x="112" y="206">חדר ימני</text><text x="190" y="208">חדר שמאלי</text></g><circle id="hsa" cx="84" cy="70" r="7" fill="#f0ab2e" stroke="#fff" stroke-width="2"/>
+      <path d="M150,66 V26" stroke="#f1c4c9" stroke-width="18" stroke-linecap="round"/><text x="176" y="40" font-size="12" fill="#7a5a50">דם אל הגוף</text>
+      ${shape('hra', 108, 100, 44, 38, '#b9ccf1')}${shape('hla', 192, 100, 44, 38, '#f6b9bf')}${shape('hrv', 112, 178, 46, 54, '#6f97dc')}${shape('hlv', 190, 178, 50, 58, '#e4525f')}
+      <g font-size="12" fill="#2c1d21" text-anchor="middle" font-weight="700"><text x="108" y="104">עלייה ימנית</text><text x="192" y="104">עלייה שמאלית</text><text x="112" y="182" fill="#fff">חדר ימני</text><text x="190" y="182" fill="#fff">חדר שמאלי</text></g>
+      <g font-size="11" fill="#7a5a50" text-anchor="middle"><text x="62" y="54">צומת SA</text><text x="62" y="67">(הקוצב)</text></g>
+      <circle cx="82" cy="72" r="5" fill="none" stroke="#f0ab2e" stroke-width="2"/>
       <g id="hsp" fill="#f0ab2e" opacity="0"></g>
-      <circle id="hout" cx="150" cy="14" r="9" fill="#cfd3dc" stroke="#fff" stroke-width="2"/>
-      <text id="hcnt" x="265" y="16" font-size="12" fill="#7a5a50" text-anchor="middle"></text>
+      <circle id="hsig" cx="82" cy="72" r="7" fill="#f0ab2e" stroke="#fff" stroke-width="2.5"/>
+      <g id="hdr" fill="#d83a4a" stroke="#fff" stroke-width="1.5"><circle id="d0" cx="150" cy="60" r="6" opacity="0"/><circle id="d1" cx="150" cy="60" r="6" opacity="0"/><circle id="d2" cx="150" cy="60" r="6" opacity="0"/></g>
+      <text id="hcnt" x="150" y="238" font-size="13" fill="#b01030" text-anchor="middle" font-weight="700"></text>
     </svg>
     <div class="row" style="flex-wrap:wrap;gap:6px;margin:6px 0">${Object.keys(TXT).map(k => `<button class="btn ${k === mode ? 'primary' : ''}" data-m="${k}">${TXT[k][0]}</button>`).join('')}</div>
     <div class="card flat" id="hecg" style="padding:6px"></div>
@@ -206,76 +211,50 @@ function arrHeartSim(box, done) {
   const q = id => $(id, host), g = id => q('#' + id);
   const sc = (e, s) => { const [cx, cy] = e.dataset.c.split(' '); e.setAttribute('transform', `translate(${cx} ${cy}) scale(${s}) translate(-${cx} -${cy})`); };
   const ecgFor = m => ecgTrace({ type: m, hr: m === 'sinus' ? 72 : m === 'af' ? 115 : 0, seed: 31 }, { sec: 4, h: 120, label: TXT[m][0] });
+  /* מסלול האות בקצב תקין: צומת SA, בעליות, עיכוב קצר, ירידה לחדרים */
+  const PATH = [[0, 82, 72], [.12, 132, 96], [.2, 150, 124], [.3, 150, 140], [.42, 178, 190]];
+  function sigAt(ph) {
+    if (ph >= PATH[PATH.length - 1][0]) return null;
+    for (let i = 1; i < PATH.length; i++) if (ph <= PATH[i][0]) { const a = PATH[i - 1], b = PATH[i], u = (ph - a[0]) / (b[0] - a[0]); return [a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u]; }
+    return null;
+  }
   function setMode(m) {
-    mode = m; count = 0; flash = 0; nextBeat = 0; t0 = performance.now();
+    mode = m; count = 0; nextBeat = 0; beatAt = -1e9; t0 = performance.now();
     $$('[data-m]', host).forEach(b => b.classList.toggle('primary', b.dataset.m === m));
     q('#htx').innerHTML = `<b>${TXT[m][0]}:</b> ${TXT[m][1]}`; q('#hecg').innerHTML = ecgFor(m);
-    g('hout').setAttribute('fill', '#cfd3dc');
   }
   function frame(now) {
     if (!host.isConnected) return;
     const t = (now - t0) / 1000;
-    let ra = 1, ven = 1, spark = 0;
+    let ra = 1, ven = 1, spark = 0, sig = null;
     if (mode === 'sinus') {
       const per = .857, ph = (t % per) / per;
       if (ph < .2) ra = 1 - .1 * Math.sin(Math.PI * ph / .2);
-      if (ph > .32 && ph < .62) { ven = 1 - .13 * Math.sin(Math.PI * (ph - .32) / .3); if (now - beatAt > 500 && ph > .42) { beatAt = now; flash = 1; count++; } }
-      g('hsa').setAttribute('r', ph < .08 ? 10 : 7);
+      if (ph > .32 && ph < .62) { ven = 1 - .13 * Math.sin(Math.PI * (ph - .32) / .3); if (now - beatAt > 500 && ph > .42) { beatAt = now; count++; } }
+      sig = sigAt(ph);
     } else if (mode === 'af') {
-      ra = 1 + .028 * Math.sin(t * 47) + .02 * Math.sin(t * 31 + 1); spark = 1; g('hsa').setAttribute('r', 6);
-      if (t >= nextBeat) { beatAt = now; nextBeat = t + .33 + Math.random() * .6; flash = .75; count++; }
+      ra = 1 + .028 * Math.sin(t * 47) + .02 * Math.sin(t * 31 + 1); spark = 1;
+      if (t >= nextBeat) { beatAt = now; nextBeat = t + .33 + Math.random() * .6; count++; }
       const dt = (now - beatAt) / 1000; if (dt < .3) ven = 1 - .12 * Math.sin(Math.PI * dt / .3);
     } else {
-      ven = 1 + .07 * Math.sin(t * 38) * Math.sin(t * 13 + .7) + .025 * Math.sin(t * 61); ra = 1 + .02 * Math.sin(t * 22); spark = 2; g('hsa').setAttribute('r', 6);
+      ven = 1 + .07 * Math.sin(t * 38) * Math.sin(t * 13 + .7) + .025 * Math.sin(t * 61); ra = 1 + .02 * Math.sin(t * 22); spark = 2;
     }
     sc(g('hra'), ra); sc(g('hla'), ra); sc(g('hrv'), ven); sc(g('hlv'), ven);
+    /* האות הבודד (בקצב תקין) */
+    const sg = g('hsig');
+    if (sig) { sg.setAttribute('cx', sig[0].toFixed(1)); sg.setAttribute('cy', sig[1].toFixed(1)); sg.setAttribute('opacity', 1); } else if (mode === 'sinus') { sg.setAttribute('cx', 82); sg.setAttribute('cy', 72); sg.setAttribute('opacity', .35); } else sg.setAttribute('opacity', 0);
+    /* אותות כאוטיים (בפרפור): מתחלפים כל כ-110 אלפיות שנייה כדי שאפשר יהיה לראות */
     const sp = g('hsp'); sp.setAttribute('opacity', spark ? .95 : 0);
-    if (spark) { let s = ''; const cx = spark === 1 ? 150 : 150, cy = spark === 1 ? 92 : 175; for (let k = 0; k < 7; k++) s += `<circle cx="${(cx - 70 + Math.random() * 140).toFixed(0)}" cy="${(cy - 28 + Math.random() * 56).toFixed(0)}" r="3"/>`; sp.innerHTML = s; }
-    flash = Math.max(0, flash - .04); const out = g('hout'); out.setAttribute('fill', flash > .05 ? '#d83a4a' : '#cfd3dc'); out.setAttribute('r', (9 + flash * 6).toFixed(1));
-    g('hcnt').textContent = mode === 'vf' ? 'אין דם שיוצא' : '';
+    if (spark && now - sparkAt > 110) { sparkAt = now; let s = ''; const cy = spark === 1 ? 100 : 178; for (let k = 0; k < 9; k++) s += `<circle cx="${(70 + Math.random() * 160).toFixed(0)}" cy="${(cy - 26 + Math.random() * 52).toFixed(0)}" r="4"/>`; sp.innerHTML = s; }
+    /* טיפות הדם שיוצאות אל הגוף אחרי כל פעימה של החדרים */
+    const dt = (now - beatAt) / 700, n = mode === 'sinus' ? 3 : 2;
+    for (let k = 0; k < 3; k++) { const p = dt - k * .14, d = g('d' + k); if (mode !== 'vf' && k < n && p > 0 && p < 1) { d.setAttribute('cy', (64 - 54 * p).toFixed(1)); d.setAttribute('opacity', (1 - p * .6).toFixed(2)); } else d.setAttribute('opacity', 0); }
+    g('hcnt').textContent = mode === 'vf' ? 'לא יוצא דם מהלב' : '';
     raf = requestAnimationFrame(frame);
   }
   $$('[data-m]', host).forEach(b => b.onclick = () => setMode(b.dataset.m));
   q('#hgo').onclick = () => { cancelAnimationFrame(raf); done(100); };
   setMode('sinus'); raf = requestAnimationFrame(frame);
-}
-
-/* ---------- מסע הקריש: לאן נסחף קריש מהעלייה השמאלית ומהעלייה הימנית ---------- */
-function clotJourney(box, done) {
-  const host = el('<div class="card"></div>'); box.appendChild(host);
-  const PATHS = {
-    L: { pts: [[172, 150], [172, 200], [170, 130], [150, 90], [150, 62]], txt: 'הקריש עבר מהעלייה השמאלית אל החדר השמאלי, יצא באבי העורקים והגיע אל כלי הדם של המוח. הוא חסם עורק במוח: <b>אירוע מוחי איסכמי</b>.' },
-    R: { pts: [[128, 150], [130, 200], [118, 135], [90, 140], [72, 150]], txt: 'הקריש עבר מהעלייה הימנית אל החדר הימני, ויצא בעורק הריאה אל הריאות. הוא חסם כלי דם בריאה: <b>תסחיף ריאתי</b> (כך בספר).' },
-  };
-  host.innerHTML = `<p class="instr">בפרפור פרוזדורים נוצרים קרישים בעליות. בחרו באיזו עלייה הוא נוצר, ועקבו אחרי הדרך שלו.</p>
-    <svg viewBox="0 0 300 260" class="co-svg" role="img" aria-label="מסלול קריש דם מהלב למוח או לריאות">
-      <circle cx="150" cy="38" r="30" fill="#f3d8c8" stroke="#b86a63" stroke-width="3"/><text x="150" y="42" text-anchor="middle" font-size="13" fill="#7a5a50">מוח</text>
-      <ellipse cx="62" cy="150" rx="32" ry="48" fill="#cfe3f5" stroke="#6a93b8" stroke-width="3"/><text x="62" y="154" text-anchor="middle" font-size="13" fill="#3d6486">ריאה</text>
-      <ellipse cx="238" cy="150" rx="32" ry="48" fill="#cfe3f5" stroke="#6a93b8" stroke-width="3"/><text x="238" y="154" text-anchor="middle" font-size="13" fill="#3d6486">ריאה</text>
-      <path d="M170,130 Q155,95 150,66" stroke="#d83a4a" stroke-width="10" fill="none" stroke-linecap="round" opacity=".55"/>
-      <path d="M120,135 Q95,135 72,148" stroke="#4a7bd0" stroke-width="10" fill="none" stroke-linecap="round" opacity=".55"/>
-      <ellipse cx="128" cy="150" rx="32" ry="26" fill="#9fb8ec" stroke="#7a2a33" stroke-width="3"/><text x="128" y="154" text-anchor="middle" font-size="11" fill="#fff">ימנית</text>
-      <ellipse cx="172" cy="150" rx="32" ry="26" fill="#f1a2a9" stroke="#7a2a33" stroke-width="3"/><text x="172" y="154" text-anchor="middle" font-size="11" fill="#7a2a33">שמאלית</text>
-      <ellipse cx="128" cy="205" rx="34" ry="34" fill="#4a7bd0" stroke="#7a2a33" stroke-width="3" opacity=".9"/><ellipse cx="172" cy="205" rx="36" ry="36" fill="#d83a4a" stroke="#7a2a33" stroke-width="3" opacity=".9"/>
-      <circle id="clot" cx="-20" cy="-20" r="9" fill="#7a0f24" stroke="#fff" stroke-width="2.5"/></svg>
-    <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" data-p="L">קריש נוצר בעלייה השמאלית</button><button class="btn" data-p="R">קריש נוצר בעלייה הימנית</button></div>
-    <div class="explain" id="ctx" style="margin-top:8px">בחרו עלייה.</div><div class="small muted" id="cseen"></div>
-    <button class="btn primary block" id="cgo" style="margin-top:10px" disabled>המשך ←</button>`;
-  const seen = new Set(), clot = $('#clot', host); let raf = 0, busy = false;
-  host._bot = () => { if (busy) return false; const k = ['L', 'R'].find(x => !seen.has(x)); if (!k) return false; $(`[data-p="${k}"]`, host).click(); return true; };
-  function run(k) {
-    busy = true; cancelAnimationFrame(raf); const pts = PATHS[k].pts, st = performance.now(), dur = animMs(3200);
-    if (window.__fast) { busy = false; $('#ctx', host).innerHTML = PATHS[k].txt; seen.add(k); $('#cseen', host).textContent = 'ראיתם ' + seen.size + ' מתוך 2 מסלולים.'; if (seen.size === 2) $('#cgo', host).disabled = false; return; } $('#ctx', host).innerHTML = 'הקריש בדרך...';
-    const seg = pts.slice(1).map((p, i) => Math.hypot(p[0] - pts[i][0], p[1] - pts[i][1])), tot = seg.reduce((a, b) => a + b, 0);
-    const f = now => {
-      const p = Math.min(1, (now - st) / dur); let d = p * tot, i = 0; while (i < seg.length - 1 && d > seg[i]) { d -= seg[i]; i++; }
-      const a = pts[i], b = pts[i + 1], u = seg[i] ? Math.min(1, d / seg[i]) : 1; clot.setAttribute('cx', a[0] + (b[0] - a[0]) * u); clot.setAttribute('cy', a[1] + (b[1] - a[1]) * u);
-      if (p < 1 && host.isConnected) raf = requestAnimationFrame(f); else { busy = false; $('#ctx', host).innerHTML = PATHS[k].txt; seen.add(k); $('#cseen', host).textContent = `ראיתם ${seen.size} מתוך 2 מסלולים.`; if (seen.size === 2) $('#cgo', host).disabled = false; }
-    };
-    raf = requestAnimationFrame(f);
-  }
-  $$('[data-p]', host).forEach(b => b.onclick = () => run(b.dataset.p));
-  $('#cgo', host).onclick = () => done(100);
 }
 
 /* ---------- מקרה בחדר מיון: כל החלטה מובילה לתוצאה ---------- */
@@ -365,11 +344,11 @@ registerGame({
     'פרפור חדרים (VF): פעילות חשמלית כאוטית בחדרים, והלב לא מזרים דם. בלי החייאה והלם חשמלי (דפיברילטור) הוא מוביל כמעט תמיד למוות.',
     'ב-AF מטפלים בנוגדי קרישה, תרופות להאטת הקצב, ולעיתים בשוק חשמלי או באבלציה.'
   ],
-  teacherNote: 'סעיף 4.1 בתוכנית וספר הקליניקה (סיבוכי אוטם: פרפור פרוזדורים ופרפור חדרים). שלבים: אנימציה של הלב בשלושה מצבים, מיון משותף של מאפייני שתי ההפרעות, מסע הקריש, שני מקרים בחדר מיון (כל בחירה שגויה מציגה תוצאה), שאלות. זיהוי הרצועות עצמן נמצא בתחנת הא.ק.ג בסוף חלק המחלות. הרצועות והאנימציות נוצרות בקוד. הערה: בספר ובתוכנית קריש מהעלייה הימנית נסחף לריאות. בפועל קרישים בפרפור פרוזדורים נוצרים בעיקר באוזנית העלייה השמאלית, ותסחיף ריאתי נגרם בדרך כלל מקריש בוורידי הרגליים.',
+  teacherNote: 'סעיף 4.1 בתוכנית וספר הקליניקה (סיבוכי אוטם: פרפור פרוזדורים ופרפור חדרים). שלבים: אנימציה של הלב בשלושה מצבים, מיון משותף של מאפייני שתי ההפרעות, שני מקרים בחדר מיון (כל בחירה שגויה מציגה תוצאה), שאלות. זיהוי הרצועות עצמן נמצא בתחנת הא.ק.ג בסוף חלק המחלות. הרצועות והאנימציות נוצרות בקוד. הערה: בספר ובתוכנית קריש מהעלייה הימנית נסחף לריאות. בפועל קרישים בפרפור פרוזדורים נוצרים בעיקר באוזנית העלייה השמאלית, ותסחיף ריאתי נגרם בדרך כלל מקריש בוורידי הרגליים.',
   mount(root, ctx) {
     root.insertAdjacentHTML('afterbegin', say('אחת הפרעות הקצב מציקה ומסוכנת בטווח הארוך, והשנייה מסכנת חיים בתוך דקות. נראה מה קורה בלב, ואחר כך תטפלו במטופלים.', 'think'));
     runStages(root, ctx, [
-      { title: 'מה קורה בלב?', run: arrHeartSim },
+      { title: 'מה קורה בלב?', fresh: true, run: arrHeartSim },
       { title: 'איזו הפרעה?', run: (box, done) => binGame(box, { tag: 'arrhythmia', buckets: ['פרפור פרוזדורים', 'פרפור חדרים'], title: 'בחרו מאפיין ואז לחצו על ההפרעה שמתאימה לו.', items: [
         { t: 'מתרחש בעליות', b: 0, why: 'בפרפור פרוזדורים תאי העליות מייצרים פעילות מהירה ולא סדירה.' },
         { t: 'מתרחש בחדרים', b: 1, why: 'בפרפור חדרים נוצרים גירויים מהירים ובלתי מסונכרנים בחדרים.' },
@@ -384,7 +363,6 @@ registerGame({
         { t: 'אפשר לחיות איתו שנים בטיפול ובמעקב', b: 0, why: 'המטופלים מנהלים חיים רגילים, עם תרופות ומעקב.' },
         { t: 'מסכן חיים תוך דקות בלי טיפול', b: 1, why: 'בלי זרימת דם המוח נפגע תוך דקות ספורות.' },
       ], onDone: done }) },
-      { title: 'מסע הקריש', run: clotJourney },
       { title: 'מקרה 1: חדר מיון', run: (box, done) => erCase(box, ER_A, done) },
       { title: 'מקרה 2: בקניון', run: (box, done) => erCase(box, ER_B, done) },
       { title: 'שאלות', run: runQuizStage([
@@ -397,63 +375,25 @@ registerGame({
   },
 });
 
-/* ---------- אי-ספיקת לב: אנימציה "לאן הדם נתקע?" ---------- */
-function hfSim(box, done) {
-  const host = el('<div class="card"></div>'); box.appendChild(host);
-  const S = {
-    ok: ['הלב תקין', 'שני הצדדים שואבים. הדם זורם בלי להיתקע: הריאות נקיות, הוורידים רגועים והקרסוליים רגילים.', []],
-    L: ['החדר השמאלי נכשל', 'החדר השמאלי לא מפנה את הדם שמגיע מהריאות, והדם נתקע אחריו: <b>הצטברות נוזלים בריאות</b>.', ['קוצר נשימה וחרחורים', 'התעוררות בלילה עם קוצר נשימה', 'במקרה חריף: בצקת ריאות ושיעול קצף ורוד', 'עייפות ובלבול (פחות דם עשיר בחמצן לגוף)']],
-    R: ['החדר הימני נכשל', 'החדר הימני לא מפנה את הדם שחוזר מהגוף, והדם נתקע אחריו: <b>הצטברות בגוף</b>.', ['ורידי צוואר בולטים', 'כבד מוגדל ובטן נפוחה', 'בצקות ברגליים ובקרסוליים']],
-  };
-  let st = 'ok';
-  host.innerHTML = `<p class="instr">בחרו איזה צד של הלב נכשל וראו איפה הדם "עומד בתור".</p>
-    <svg viewBox="0 0 300 300" class="co-svg" role="img" aria-label="גוף ולב: איפה מצטבר הדם בכשל של החדר השמאלי או הימני">
-      <circle cx="150" cy="30" r="22" fill="#f3d8c8" stroke="#b86a63" stroke-width="2.5"/>
-      <rect x="100" y="66" width="100" height="136" rx="22" fill="#f8e4da" stroke="#b86a63" stroke-width="2.5"/>
-      <rect x="118" y="200" width="26" height="76" rx="8" fill="#f8e4da" stroke="#b86a63" stroke-width="2.5"/><rect x="156" y="200" width="26" height="76" rx="8" fill="#f8e4da" stroke="#b86a63" stroke-width="2.5"/>
-      <ellipse cx="119" cy="112" rx="21" ry="34" fill="#cfe3f5" stroke="#6a93b8" stroke-width="2.5"/><ellipse cx="181" cy="112" rx="21" ry="34" fill="#cfe3f5" stroke="#6a93b8" stroke-width="2.5"/>
-      <g class="hf-fx" id="hf-lungs"><ellipse cx="119" cy="122" rx="19" ry="24" fill="#4a90d9" opacity=".7"/><ellipse cx="181" cy="122" rx="19" ry="24" fill="#4a90d9" opacity=".7"/><circle cx="112" cy="100" r="3" fill="#fff"/><circle cx="125" cy="128" r="3" fill="#fff"/><circle cx="176" cy="108" r="3" fill="#fff"/><circle cx="188" cy="132" r="3" fill="#fff"/></g>
-      <g id="hf-hearts"><circle id="hf-r" cx="143" cy="150" r="14" fill="#4a7bd0" stroke="#7a2a33" stroke-width="2.5"/><circle id="hf-l" cx="162" cy="150" r="16" fill="#d83a4a" stroke="#7a2a33" stroke-width="2.5"/><text id="hf-x" x="150" y="126" text-anchor="middle" font-size="18" fill="#c0334d" opacity="0">✖</text></g>
-      <g class="hf-fx" id="hf-neck"><rect x="132" y="50" width="12" height="20" rx="6" fill="#3f6fc6"/><rect x="156" y="50" width="12" height="20" rx="6" fill="#3f6fc6"/></g>
-      <g class="hf-fx" id="hf-liver"><ellipse cx="128" cy="184" rx="26" ry="14" fill="#8a4a6a" opacity=".8"/></g>
-      <g class="hf-fx" id="hf-ankles"><ellipse cx="131" cy="272" rx="20" ry="12" fill="#e5a9c0" stroke="#b86a63" stroke-width="2"/><ellipse cx="169" cy="272" rx="20" ry="12" fill="#e5a9c0" stroke="#b86a63" stroke-width="2"/></g>
-    </svg>
-    <div class="row" style="flex-wrap:wrap;gap:6px;margin:6px 0">${Object.keys(S).map(k => `<button class="btn ${k === st ? 'primary' : ''}" data-s="${k}">${S[k][0]}</button>`).join('')}</div>
-    <div class="explain good" id="hfx"></div>
-    <button class="btn primary block" id="hgo" style="margin-top:10px">המשך ←</button>`;
-  const q = id => $(id, host);
-  function show(k) {
-    st = k; $$('[data-s]', host).forEach(b => b.classList.toggle('primary', b.dataset.s === k));
-    q('#hf-lungs').classList.toggle('on', k === 'L'); ['neck', 'liver', 'ankles'].forEach(n => q('#hf-' + n).classList.toggle('on', k === 'R'));
-    q('#hf-l').setAttribute('fill', k === 'L' ? '#b9bcc6' : '#d83a4a'); q('#hf-r').setAttribute('fill', k === 'R' ? '#b9bcc6' : '#4a7bd0'); q('#hf-x').setAttribute('opacity', k === 'ok' ? 0 : 1); q('#hf-x').setAttribute('x', k === 'L' ? 162 : 143);
-    q('#hfx').innerHTML = `<b>${S[k][0]}:</b> ${S[k][1]}${S[k][2].length ? `<ul style="margin:6px 0 0;padding-inline-start:20px">${S[k][2].map(t => `<li>${t}</li>`).join('')}</ul>` : ''}`;
-  }
-  $$('[data-s]', host).forEach(b => b.onclick = () => show(b.dataset.s));
-  q('#hgo').onclick = () => done(100);
-  show('ok');
-}
-
-/* ---------- אי-ספיקת לב: איפה בגוף, ואיזה צד ---------- */
+/* ---------- אי-ספיקת לב: מאיזה צד של הלב הסימן ---------- */
 function hfBody(box, done) {
-  const ZONES = [['🫁', 'ריאות'], ['🩸', 'ורידי הצוואר'], ['🍖', 'כבד ובטן'], ['🦶', 'קרסוליים ורגליים'], ['🧠', 'מוח']];
   const ITEMS = shuffle([
-    ['קוצר נשימה וחרחורים בעת נשימה', 0, 0, 'הדם נתקע בריאות אחרי החדר השמאלי.'],
-    ['התעוררות בלילה עם קוצר נשימה, וצורך בכמה כריות', 0, 0, 'כשנשכבים הנוזל חוזר אל הריאות: סימן של כשל שמאלי.'],
-    ['שיעול עם ליחה ורודה ומקציפה', 0, 0, 'בצקת ריאות: נוזל בנאדיות, מצב חירום של כשל שמאלי.'],
-    ['ורידי צוואר בולטים', 1, 1, 'הדם נעצר לפני העלייה הימנית ומתגודד בוורידים.'],
-    ['כבד מוגדל ובטן נפוחה', 2, 1, 'הוורידים מהבטן מתגודדים כשהצד הימני נכשל.'],
-    ['נפיחות בקרסוליים שנשארת אחרי לחיצה', 3, 1, 'הדם נתקע בגוף ונוזל דולף אל הרקמות, ובמיוחד ברגליים.'],
-    ['בלבול ועייפות בגלל אספקת דם לא מספקת', 4, 0, 'הצד השמאלי מזרים דם עשיר בחמצן אל המוח, ובכשל שלו המוח מקבל פחות.'],
+    ['קוצר נשימה וחרחורים בעת נשימה', 0, 'הדם נתקע בריאות אחרי החדר השמאלי.'],
+    ['התעוררות בלילה עם קוצר נשימה, וצורך בכמה כריות', 0, 'כשנשכבים הנוזל חוזר אל הריאות: סימן של כשל שמאלי.'],
+    ['שיעול עם ליחה ורודה ומקציפה', 0, 'בצקת ריאות: נוזל בנאדיות, מצב חירום של כשל שמאלי.'],
+    ['ורידי צוואר בולטים', 1, 'הדם נעצר לפני העלייה הימנית ומתגודד בוורידים.'],
+    ['כבד מוגדל ובטן נפוחה', 1, 'הוורידים מהבטן מתגודדים כשהצד הימני נכשל.'],
+    ['נפיחות בקרסוליים שנשארת אחרי לחיצה', 1, 'הדם נתקע בגוף ונוזל דולף אל הרקמות, ובמיוחד ברגליים.'],
+    ['בלבול ועייפות בגלל אספקת דם לא מספקת', 0, 'הצד השמאלי מזרים דם עשיר בחמצן אל המוח, ובכשל שלו המוח מקבל פחות.'],
   ]);
-  let i = 0, wrong = 0, zone = null; const host = el('<div class="card"></div>'); box.appendChild(host);
-  host._bot = () => { if ($('#hnx', host)) return false; const it = ITEMS[i], b = zone == null ? $(`[data-z="${it[1]}"]`, host) : $(`[data-sd="${it[2]}"]:not([disabled])`, host); if (!b) return false; b.click(); return true; };
+  let i = 0, wrong = 0; const host = el('<div class="card"></div>'); box.appendChild(host);
+  host._bot = () => { if ($('#hnx', host)) return false; const b = $(`[data-sd="${ITEMS[i][1]}"]:not([disabled])`, host); if (!b) return false; b.click(); return true; };
   function draw() {
     const it = ITEMS[i];
-    host.innerHTML = `<p class="instr">סימן ${i + 1} מתוך ${ITEMS.length}: איפה בגוף הוא מופיע, ומה הצד הפגוע?</p><div class="card flat center" style="font-size:1.1rem;font-weight:800">${it[0]}</div>
-      ${zone == null ? `<p><b>איפה בגוף?</b></p><div class="row" style="flex-wrap:wrap;gap:8px">${ZONES.map((z, k) => `<button class="btn" data-z="${k}">${z[0]} ${z[1]}</button>`).join('')}</div>` : `<p><b>איזה צד של הלב נכשל?</b></p><div class="row" style="gap:8px"><button class="btn" data-sd="0">החדר השמאלי</button><button class="btn" data-sd="1">החדר הימני</button></div>`}<div id="hfb" style="margin-top:8px"></div>`;
-    $$('[data-z]', host).forEach(b => b.onclick = () => { if (+b.dataset.z === it[1]) { Snd.play('ok'); zone = it[1]; draw(); } else { wrong++; Store.mistake('hf'); Snd.play('no'); b.disabled = true; $('#hfb', host).innerHTML = '<div class="explain bad">לא בדיוק. חשבו איפה הדם עומד בתור, ונסו שוב.</div>'; } });
+    host.innerHTML = `<p class="instr">סימן ${i + 1} מתוך ${ITEMS.length}: איזה צד של הלב נכשל?</p><div class="card flat center" style="font-size:1.1rem;font-weight:800">${it[0]}</div>
+      <div class="row" style="gap:8px;margin-top:8px"><button class="btn" data-sd="0">החדר השמאלי</button><button class="btn" data-sd="1">החדר הימני</button></div><div id="hfb" style="margin-top:8px"></div>`;
     $$('[data-sd]', host).forEach(b => b.onclick = () => {
-      if (+b.dataset.sd === it[2]) { Snd.play('ok'); $$('[data-sd]', host).forEach(x => x.disabled = true); $('#hfb', host).innerHTML = `<div class="explain good">✅ ${it[3]}</div><button class="btn primary block" id="hnx" style="margin-top:8px">${i < ITEMS.length - 1 ? 'הבא ←' : 'סיום ←'}</button>`; $('#hnx', host).onclick = () => { if (i < ITEMS.length - 1) { i++; zone = null; draw(); } else done(Math.max(0, Math.round(100 * (ITEMS.length - wrong) / ITEMS.length))); }; }
+      if (+b.dataset.sd === it[1]) { Snd.play('ok'); $$('[data-sd]', host).forEach(x => x.disabled = true); $('#hfb', host).innerHTML = `<div class="explain good">✅ ${it[2]}</div><button class="btn primary block" id="hnx" style="margin-top:8px">${i < ITEMS.length - 1 ? 'הבא ←' : 'סיום ←'}</button>`; $('#hnx', host).onclick = () => { if (i < ITEMS.length - 1) { i++; draw(); } else done(Math.max(0, Math.round(100 * (ITEMS.length - wrong) / ITEMS.length))); }; }
       else { wrong++; Store.mistake('hf'); Snd.play('no'); b.disabled = true; $('#hfb', host).innerHTML = '<div class="explain bad">לא הצד הנכון. זכרו: שמאל = ריאות ומוח, ימין = הגוף כולו.</div>'; }
     });
   }
@@ -468,12 +408,11 @@ registerGame({
     'אי-ספיקה שמאלית: הדם מצטבר בריאות (קוצר נשימה, חרחורים, ובמקרה חריף בצקת ריאות). אי-ספיקה ימנית: הדם מצטבר בגוף (בצקות ברגליים, גודש בוורידי הצוואר ובכבד).',
     'הטיפול: להקטין את העומס על הלב ולהוציא נוזלים: משתנים, ניטרוגליצרין, חוסמי בטא, מעכבי ACE, וחמצן במצב חמור. בקוצר נשימה מושיבים את המטופל בתנוחה מוגבהת.'
   ],
-  teacherNote: 'סעיף 4.2 בתוכנית וספר הקליניקה (פרק 3). שלבים: אנימציה "לאן הדם נתקע" (שמאל מול ימין), טבלת "נחשו לפני שחושפים", שיוך סימנים לגוף ולצד, ממצאי בדיקה (צילום חזה, אקו, בדיקה גופנית), מיון טיפולים לפי מטרתם, שאלות. לפי הספר, בלבול נובע מאספקה לקויה של דם עשיר בחמצן למוח (אי-ספיקה שמאלית), וירידה בסיבולת למאמץ נוגעת לשני הצדדים, ולכן לא נכללה בטבלה. הטיפולים הנזכרים הם אלה שבספר ובתוכנית. הערה: בפועל אי-ספיקה נובעת לרוב משילוב של שני הצדדים.',
+  teacherNote: 'סעיף 4.2 בתוכנית וספר הקליניקה (פרק 3). שלבים: טבלת "נחשו לפני שחושפים", שיוך סימנים לצד הלב, ממצאי בדיקה (צילום חזה, אקו, בדיקה גופנית), מיון טיפולים לפי מטרתם, שאלות. לפי הספר, בלבול נובע מאספקה לקויה של דם עשיר בחמצן למוח (אי-ספיקה שמאלית), וירידה בסיבולת למאמץ נוגעת לשני הצדדים, ולכן לא נכללה בטבלה. הטיפולים הנזכרים הם אלה שבספר ובתוכנית. הערה: בפועל אי-ספיקה נובעת לרוב משילוב של שני הצדדים.',
   mount(root, ctx) {
     root.insertAdjacentHTML('afterbegin', say('כשחדר מפסיק לשאוב, הדם "עומד בתור" אחריו. השאלה: איפה התור?', 'think'));
     const fig = (k, alt) => ART[k] ? `<div class="card flat center" style="padding:6px"><img class="zoomable" src="${ART[k]}" alt="${alt}" style="max-width:300px;width:100%;border-radius:12px"></div>` : '';
     runStages(root, ctx, [
-      { title: 'לאן הדם נתקע?', run: hfSim },
       { title: 'איפה התור?', run: (box, done) => predictTable(box, { tag: 'hf', cols: ['אי-ספיקה שמאלית', 'אי-ספיקה ימנית'], rows: [
         { label: 'קוצר נשימה וחרחורים בריאות', why: 'חדר שמאל לא מפנה את הדם שמגיע מהריאות, ולכן הוא מצטבר בהן.', cells: [{ opts: ['כן', 'לא'], ok: 0 }, { opts: ['כן', 'לא'], ok: 1 }] },
         { label: 'בצקות ברגליים', why: 'חדר ימין לא מפנה את הדם שחוזר מהגוף, ולכן נוזלים מצטברים בגפיים.', cells: [{ opts: ['כן', 'לא'], ok: 1 }, { opts: ['כן', 'לא'], ok: 0 }] },
@@ -481,15 +420,15 @@ registerGame({
         { label: 'גודש בכבד ונפיחות בטנית', why: 'הוורידים מהבטן מתגודדים כשהצד הימני נכשל.', cells: [{ opts: ['כן', 'לא'], ok: 1 }, { opts: ['כן', 'לא'], ok: 0 }] },
         { label: 'בלבול עקב אספקה לקויה של דם מחומצן למוח', why: 'הצד השמאלי מזרים דם עשיר בחמצן לגוף, כולל למוח.', cells: [{ opts: ['כן', 'לא'], ok: 0 }, { opts: ['כן', 'לא'], ok: 1 }] },
       ], onDone: done }) },
-      { title: 'איפה בגוף?', run: hfBody },
+      { title: 'איזה צד נכשל?', run: hfBody },
       { title: 'קוראים ממצאים', run: runQuizStage([
         Q('מטופל מגיע עם קוצר נשימה. בצילום החזה (בתמונה) רואים לב מוגדל ועכירות בריאות. מה המשמעות?', 'hf', [OK('בצקת ריאות: נוזל בריאות, כמו באי-ספיקה שמאלית', 'הלב מוגדל והדם נתקע בריאות, ולכן נוזל דולף אל הנאדיות.'), NO('צילום חזה תקין לגמרי', 'הלב מוגדל והריאות עכורות, ולכן אינו תקין.'), NO('דימום במוח', 'צילום חזה לא מראה את המוח, והתמונה היא של חזה.'), NO('אי-ספיקה ימנית בלבד, כי הריאות לא מושפעות', 'בכשל ימני הריאות לרוב נקיות. כאן הריאות עכורות.')], { vis: fig('xray_edema', 'צילום חזה') }),
         Q('בבדיקה גופנית של מטופל רואים נפיחות בשתי הרגליים, ולחיצה משאירה שקע (בתמונה). לאיזה צד של הלב זה מתאים בעיקר?', 'hf', [OK('אי-ספיקה ימנית: הדם נתקע בגוף', 'נוזל נאגר ברקמות הרגליים כי הדם לא מפונה מהעלייה הימנית.'), NO('אי-ספיקה שמאלית בלבד: הדם נתקע בריאות', 'שמאלית גורמת בעיקר לבעיות בריאות.'), NO('אין קשר ללב: זו תמיד בעיה בכליות', 'בצקות כאלה יכולות לנבוע מהלב, ולכן בודקים.'), NO('היצרות בעורק הכלילי הימני בלבד', 'היצרות כלילית לא גורמת ישירות לבצקות.')], { vis: fig('exam_c9', 'בצקת ברגליים') }),
         Q('באקו לב רואים חדר שמאלי מורחב עם דפנות דקות (בתמונה). מה המשמעות?', 'hf', [OK('החדר השמאלי נחלש ולא מזרים כראוי: אי-ספיקה שמאלית', 'חדר מורחב ודק מתכווץ בצורה חלשה.'), NO('בריא לגמרי, כי חדר גדול הוא חזק יותר', 'בחדר מורחב עם דפנות דקות כוח ההתכווצות חלש.'), NO('מסתם אבי העורקים הפך לצר', 'זה ממצא אחר, והאקו כאן מדגים חדר גדול.'), NO('העלייה הימנית נחסמה בקריש', 'בתמונה רואים את החדר השמאלי.')], { vis: fig('echo_dilated', 'אקו לב') }),
       ]) },
-      { title: 'מה הטיפול ולמה?', run: (box, done) => binGame(box, { tag: 'hf', buckets: ['מפנה נוזלים', 'מקל על הנשימה', 'מקטין עומס על הלב'], title: 'בחרו טיפול ואז לחצו על המטרה העיקרית שלו.', items: [
-        { t: 'תרופה משתנה', b: 0, why: 'מוציאה עודף נוזלים מהגוף, ומקלה על הגודש.' },
-        { t: 'הפחתת מלח בתזונה', b: 0, why: 'פחות מלח אומר פחות נוזלים בגוף ופחות גודש.' },
+      { title: 'מה הטיפול ולמה?', run: (box, done) => binGame(box, { tag: 'hf', buckets: ['מפחית נוזלים בגוף', 'מקל על הנשימה', 'מקטין עומס על הלב'], title: 'בחרו טיפול ואז לחצו על המטרה העיקרית שלו.', items: [
+        { t: 'תרופה משתנה (מוציאה נוזלים)', b: 0, why: 'מוציאה עודף נוזלים דרך הכליות, ומקלה על הגודש.' },
+        { t: 'הפחתת מלח בתזונה (מונעת הצטברות נוזלים)', b: 0, why: 'מלח (נתרן) קושר מים. באי-ספיקת לב, שמאלית וימנית, הגוף נוטה לשמור מלח ומים ולכן הנוזלים מצטברים. אם אוכלים פחות מלח, מצטבר פחות נוזל. הפחתת מלח לא מוציאה נוזלים שכבר נצברו: את זה עושה המשתן.' },
         { t: 'ישיבה בתנוחה מוגבהת', b: 1, why: 'בישיבה הנוזל יורד אל בסיס הריאות והנשימה קלה יותר.' },
         { t: 'חמצן במצב חמור', b: 1, why: 'משפר את החמצון כשהריאות מלאות בנוזל.' },
         { t: 'ניטרוגליצרין (מרחיב כלי דם)', b: 2, why: 'מרחיב כלי דם ומקטין את העומס שעליו הלב עובד.' },
@@ -606,29 +545,39 @@ function cvaSim(box, done) {
     isch: ['אירוע איסכמי: קריש חוסם עורק', 'קריש (או תסחיף מהלב) נתקע בעורק במוח, והאזור שאחריו לא מקבל דם עשיר בחמצן ומתחיל לקרוס.', 'ct_ischemic', 'CT: אזור כהה בדופן המוח'],
     hem: ['אירוע המורגי: עורק נקרע', 'עורק במוח נקרע (לרוב בגלל יתר לחץ דם או מפרצת), והדם דולף אל הרקמה ולוחץ עליה.', 'ct_hemorrhage', 'CT: אזור לבן בהיר: דימום'],
   };
+  /* מסלול הקריש בעורק: מהצוואר אל נקודת החסימה */
+  const WAY = [[150, 232], [150, 190], [172, 150], [205, 118]];
   const seen = new Set(); let raf = 0, kind = null, busy = false;
   host._bot = () => { if (busy) return false; const k = ['isch', 'hem'].find(x => !seen.has(x)); if (!k) return false; $(`[data-k="${k}"]`, host).click(); return true; };
   host.innerHTML = `<p class="instr">בחרו סוג אירוע וראו מה קורה בעורק ובמוח, ומה רואים בגוף ובבדיקה.</p>
-    <svg viewBox="0 0 300 200" class="co-svg" role="img" aria-label="אנימציה של אירוע מוחי איסכמי או המורגי">
-      <ellipse cx="150" cy="96" rx="118" ry="82" fill="#f6d8d2" stroke="#b86a63" stroke-width="3"/>
-      <path d="M150,190 V120 Q150,92 190,80 M150,120 Q150,95 110,84" stroke="#d83a4a" stroke-width="9" fill="none" stroke-linecap="round"/>
-      <ellipse id="czone" cx="200" cy="70" rx="42" ry="34" fill="#4a4f66" opacity="0"/>
-      <circle id="cclot" cx="150" cy="188" r="0" fill="#7a0f24" stroke="#fff" stroke-width="2.5"/>
-      <circle id="cbleed" cx="190" cy="82" r="0" fill="#b01030" opacity=".92"/>
+    <svg viewBox="0 0 300 250" class="co-svg" role="img" aria-label="אנימציה של אירוע מוחי איסכמי או המורגי">
+      <defs><radialGradient id="cvb" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#8e0c26"/><stop offset=".7" stop-color="#b8142f"/><stop offset="1" stop-color="#b8142f" stop-opacity="0"/></radialGradient><linearGradient id="cvg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7dcd6"/><stop offset="1" stop-color="#eec1b9"/></linearGradient></defs>
+      <path d="M58,112 C40,60 92,22 152,22 C218,22 264,56 258,112 C256,140 234,152 212,154 L190,156 C178,168 162,170 150,160 C130,164 100,160 78,148 C64,142 60,128 58,112 Z" fill="url(#cvg)" stroke="#b86a63" stroke-width="3"/>
+      <path d="M190,154 C216,152 250,162 244,186 C236,206 202,206 188,190 Z" fill="#efc3bb" stroke="#b86a63" stroke-width="3"/>
+      <path d="M142,160 C146,180 142,200 140,214 L162,214 C160,196 164,176 160,160 Z" fill="#efc3bb" stroke="#b86a63" stroke-width="3"/>
+      <g fill="none" stroke="#d3978f" stroke-width="3" stroke-linecap="round"><path d="M84,70 C96,52 116,54 126,64 C138,50 160,52 168,66"/><path d="M76,100 C94,86 110,92 118,104 C130,90 150,94 156,108"/><path d="M180,60 C198,48 220,56 226,72 C238,66 250,80 244,94"/><path d="M178,96 C192,84 214,88 222,102 C232,98 244,110 240,124"/><path d="M92,128 C108,118 124,124 132,136 C146,126 164,130 172,142"/><path d="M196,130 C210,124 224,132 228,142"/></g>
+      <path id="cvz" d="M178,64 C210,42 250,66 244,104 C240,128 208,136 190,120 C172,106 164,80 178,64 Z" fill="#59607c" opacity="0" stroke="#3b4160" stroke-width="2" stroke-dasharray="6 4"/>
+      <g fill="none" stroke="#e0495a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"><path d="M150,244 V190 Q150,160 176,142 Q196,128 206,116"/><path d="M206,116 Q220,98 222,78"/><path d="M206,116 Q236,112 242,94"/><path d="M160,170 Q130,150 118,118"/></g>
+      <circle id="cbleed" cx="208" cy="112" r="0" fill="url(#cvb)"/>
+      <circle id="cclot" cx="150" cy="232" r="0" fill="#7a0f24" stroke="#fff" stroke-width="3"/>
+      <text id="clab" x="150" y="12" text-anchor="middle" font-size="12" fill="#7a5a50"></text>
     </svg>
     <div class="row" style="flex-wrap:wrap;gap:6px;margin:6px 0"><button class="btn" data-k="isch">${T.isch[0]}</button><button class="btn" data-k="hem">${T.hem[0]}</button></div>
     <div class="explain" id="ctx">בחרו אחד מהאירועים.</div>
     <div id="cfig"></div>
     <button class="btn primary block" id="cgo" style="margin-top:10px" disabled>המשך ←</button>`;
-  const clot = $('#cclot', host), bleed = $('#cbleed', host), zone = $('#czone', host);
+  const clot = $('#cclot', host), bleed = $('#cbleed', host), zone = $('#cvz', host), lab = $('#clab', host);
+  const way = u => { const seg = WAY.slice(1).map((p, i) => Math.hypot(p[0] - WAY[i][0], p[1] - WAY[i][1])), tot = seg.reduce((a, b) => a + b, 0); let d = Math.min(1, u) * tot, i = 0; while (i < seg.length - 1 && d > seg[i]) { d -= seg[i]; i++; } const a = WAY[i], b = WAY[i + 1], r = seg[i] ? Math.min(1, d / seg[i]) : 1; return [a[0] + (b[0] - a[0]) * r, a[1] + (b[1] - a[1]) * r]; };
   function run(k) {
-    cancelAnimationFrame(raf); kind = k; clot.setAttribute('r', 0); bleed.setAttribute('r', 0); zone.setAttribute('opacity', 0); $('#cfig', host).innerHTML = '';
-    busy = true; $('#ctx', host).innerHTML = 'מה קורה...'; const st = performance.now(), dur = animMs(3000);
+    cancelAnimationFrame(raf); kind = k; clot.setAttribute('r', 0); bleed.setAttribute('r', 0); zone.setAttribute('opacity', 0); lab.textContent = ''; $('#cfig', host).innerHTML = '';
+    busy = true; $('#ctx', host).innerHTML = 'מה קורה...'; const st = performance.now(), dur = animMs(3200);
     if (window.__fast) { finish(k); return; }
     const f = now => {
       const p = Math.min(1, (now - st) / dur);
-      if (k === 'isch') { const q = Math.min(1, p / .6); clot.setAttribute('r', 9); clot.setAttribute('cx', 150 + (q > .7 ? (q - .7) / .3 * 40 : 0)); clot.setAttribute('cy', 188 - q * 108 + (q > .7 ? 0 : 0)); if (p > .6) zone.setAttribute('opacity', (Math.min(1, (p - .6) / .4) * .55).toFixed(2)); }
-      else { if (p > .3) bleed.setAttribute('r', (Math.min(1, (p - .3) / .5) * 30).toFixed(1)); }
+      if (k === 'isch') {
+        const q = Math.min(1, p / .6), c = way(q); clot.setAttribute('r', 10); clot.setAttribute('cx', c[0].toFixed(1)); clot.setAttribute('cy', c[1].toFixed(1));
+        if (p > .6) { zone.setAttribute('opacity', (Math.min(1, (p - .6) / .4) * .6).toFixed(2)); lab.textContent = 'אזור שלא מקבל דם'; }
+      } else if (p > .3) { bleed.setAttribute('r', (Math.min(1, (p - .3) / .6) * 36).toFixed(1)); lab.textContent = 'דם שדלף מהעורק'; }
       if (p < 1 && host.isConnected) raf = requestAnimationFrame(f); else finish(k);
     };
     raf = requestAnimationFrame(f);
@@ -637,6 +586,7 @@ function cvaSim(box, done) {
     busy = false; seen.add(k);
     const side = 'הפגיעה בצד אחד של המוח משתקת או מחלישה את הצד <b>הנגדי</b> של הגוף (Hemiplegia או Hemiparesis), ויכולים להופיע צניחת זווית הפה והפרעת דיבור (Aphasia).';
     $('#ctx', host).innerHTML = `<b>${T[k][0]}:</b> ${T[k][1]}<div style="margin-top:6px">${side}</div>`;
+    if (window.__fast) { if (k === 'isch') zone.setAttribute('opacity', .6); else bleed.setAttribute('r', 36); }
     $('#cfig', host).innerHTML = ART[T[k][2]] ? `<figure class="fig" style="max-width:280px;margin:8px auto"><img src="${ART[T[k][2]]}" alt="${T[k][3]}"><figcaption>${T[k][3]} (לחצו להגדלה)</figcaption></figure>` : '';
     if (seen.size === 2) $('#cgo', host).disabled = false;
   }

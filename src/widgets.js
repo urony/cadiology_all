@@ -137,20 +137,23 @@ function binGame(root, { items, buckets, tag, title, onDone }) {
 /* ===== שלבים: מריץ משחק מכמה שלבים ברצף ומחשב ציון ממוצע =====
    כל שלב: fn(host, done) כאשר done(pct) מקדם לשלב הבא. אחרי השלב האחרון: ctx.finish(ממוצע) */
 function runStages(root, ctx, stages, o = {}) {
-  const scores = []; let i = 0;
+  /* כל שלב נשמר בזיכרון: חזרה לשלב קודם מראה אותו כפי שהושאר, ואפשר לעבור קדימה לשלבים שכבר ביקרו בהם.
+     שלב עם fresh:true (אנימציה חיה) נבנה מחדש בכל כניסה. */
+  const scores = [], boxes = []; let maxK = -1;
   const host = el('<div></div>'); root.appendChild(host);
-  function next() {
-    if (i >= stages.length) { ctx.finish(Math.round(scores.filter(x => x != null).reduce((a, b) => a + b, 0) / Math.max(1, scores.filter(x => x != null).length)), o.after || ''); return; }
-    const k = i++; host.innerHTML = '';
+  function go(k) {
+    if (k >= stages.length) { ctx.finish(Math.round(scores.filter(x => x != null).reduce((a, b) => a + b, 0) / Math.max(1, scores.filter(x => x != null).length)), o.after || ''); return; }
+    host.innerHTML = ''; maxK = Math.max(maxK, k);
     if (stages.length > 1) {
-      const bar = el(`<div class="row sp stagebar"><span class="small muted">${(stages[k].title || 'שלב')} · ${k + 1} מתוך ${stages.length}</span>${k > 0 ? '<button class="btn small" data-prev>→ לשלב הקודם</button>' : '<span></span>'}</div>`);
+      const bar = el(`<div class="row sp stagebar"><span class="small muted">${(stages[k].title || 'שלב')} · ${k + 1} מתוך ${stages.length}</span><span class="row" style="gap:6px">${k > 0 ? '<button class="btn small" data-prev>→ לשלב הקודם</button>' : ''}${k < maxK ? '<button class="btn small" data-fwd>לשלב הבא ←</button>' : ''}</span></div>`);
       host.appendChild(bar);
-      const pb = bar.querySelector('[data-prev]'); if (pb) pb.onclick = () => { i = k - 1; scores.length = Math.min(scores.length, k - 1); next(); window.scrollTo(0, 0); };
+      const pb = bar.querySelector('[data-prev]'); if (pb) pb.onclick = () => { go(k - 1); window.scrollTo(0, 0); };
+      const fb = bar.querySelector('[data-fwd]'); if (fb) fb.onclick = () => { go(k + 1); window.scrollTo(0, 0); };
     }
-    const box = el('<div></div>'); host.appendChild(box);
-    stages[k].run(box, p => { scores[k] = p; next(); window.scrollTo(0, 0); });
+    if (boxes[k] && !stages[k].fresh) host.appendChild(boxes[k]);
+    else { const box = boxes[k] = el('<div></div>'); host.appendChild(box); stages[k].run(box, p => { scores[k] = p; go(k + 1); window.scrollTo(0, 0); }); }
   }
-  next();
+  go(0);
 }
 const runQuizStage = (items, o) => (box, done) => runQuiz(box, { finish: (p, extra) => done(p) }, items, o);
 
