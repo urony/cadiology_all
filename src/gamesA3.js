@@ -18,7 +18,7 @@ registerGame({
   mount(root, ctx) {
     root.insertAdjacentHTML('afterbegin', say('טרשת עורקים היא סרט איטי שנמשך שנים, ובסוף יש פיצוץ פתאומי. בואו נראה איך זה מתחיל.', 'think'));
     runStages(root, ctx, [
-      { title: 'ארבעה שלבים', run: (box, done) => { box.insertAdjacentHTML('beforeend', `<div class="card"><p class="instr">חתך של עורק כלילי בארבעה שלבים (תרשים סכמטי):</p><div class="row" style="flex-wrap:nowrap;gap:6px">${['דופן תקינה', 'פלאק מתחיל', 'היצרות', 'קריש חוסם'].map((t, k) => `<div style="flex:1;text-align:center"><div>${plaqueSVG(k)}</div><div class="small"><b>${t}</b></div></div>`).join('')}</div><button class="btn primary block" id="pgo" style="margin-top:10px">המשך ←</button></div>`); $('#pgo', box).onclick = () => done(100); } },
+      { title: 'ארבעה שלבים', run: (box, done) => { box.insertAdjacentHTML('beforeend', `<div class="card"><p class="instr">חתך של עורק כלילי בארבעה שלבים:</p><div class="row" style="flex-wrap:wrap;gap:6px">${['דופן תקינה', 'פלאק מתחיל', 'היצרות', 'קריש חוסם'].map((t, k) => `<div style="flex:1 1 ${ART.plaque_1 ? 45 : 20}%;text-align:center"><div>${ART['plaque_' + (k + 1)] ? `<img class="zoomable" src="${ART['plaque_' + (k + 1)]}" alt="${t}" style="width:100%;border-radius:12px">` : plaqueSVG(k)}</div><div class="small"><b>${t}</b></div></div>`).join('')}</div><button class="btn primary block" id="pgo" style="margin-top:10px">המשך ←</button></div>`); $('#pgo', box).onclick = () => done(100); } },
       { title: 'סדר ההתפתחות', run: (box, done) => orderGame(box, { tag: 'athero', hint: 'סדרו את שלבי התפתחות הרובד הטרשתי והאירוע החריף.', steps: ['פגיעה בשכבה הפנימית של העורק (האנדותל)', 'חדירת LDL מחומצן ותאי דלקת אל דופן העורק', 'תאי הדלקת בולעים כולסטרול והופכים לתאי קצף', 'נוצר פלאק ומצטבר בו גם סידן, והעורק מצטר', 'קרע בפלאק ויצירת קריש דם שחוסם את העורק'], onDone: done }) },
       { title: 'מי הכולסטרול ומי השומן?', run: (box, done) => binGame(box, { tag: 'lipids', buckets: ['LDL', 'HDL', 'טריגליצרידים'], title: 'בחרו מאפיין ואז לחצו על המולקולה שמתאימה לו.', items: [
         { t: 'מוביל כולסטרול מהכבד אל רקמות הגוף', b: 0, why: 'LDL מוביל כולסטרול לרקמות, ובעודף משקיע אותו בדפנות העורקים.' },
@@ -77,6 +77,7 @@ registerGame({
   teacherNote: 'סעיף 3.3 בתוכנית ופרק 2.3 בספר הקליניקה (הגדרה, שלבים, אבחון, MONA, סיבוכים). בתוכנית תשפ"ז נדרש טרופונין כסמן ושינוי ב-ST; ההבחנה STEMI/NSTEMI מופיעה בספר ובתוכנית תשפ"ו (STEMI: אוטם קשה, NSTEMI: פחות קשה). שלבים: סידור שלבי האוטם, זיהוי רצועות, שאלות. הערת רקע: MONA הוא מה שנלמד בספר ובתוכנית. בהנחיות העדכניות חמצן ניתן רק בסטורציה נמוכה, מורפין ניתן בזהירות, ויש תרופות נוספות (מעכב P2Y12, נוגד קרישה). גם ב-NSTEMI התוצאות ארוכות הטווח אינן טובות יותר, והעורק לרוב חסום חלקית או זמנית, בעוד שב-STEMI לרוב חסימה מלאה. הרצועות נוצרות בקוד.',
   mount(root, ctx) {
     root.insertAdjacentHTML('afterbegin', say('באוטם כל דקה חשובה: "זמן הוא שריר". בואו נראה מה קורה, איך מזהים, ומה עושים.', 'think'));
+    root.insertAdjacentHTML('beforeend', artFigs([['mi_heart', 'לב עם אוטם: עורק כלילי סתום בקריש, ואזור בדופן החדר שנפגע (כהה)']]));
     runStages(root, ctx, [
       { title: 'שלבי האוטם', run: (box, done) => orderGame(box, { tag: 'mi', hint: 'סדרו את שלושת שלבי האוטם, מהמוקדם למאוחר.', steps: ['איסכמיה: ירידה באספקת הדם עקב היצרות', 'נזק: חסימה מלאה, וכאבים עזים (הרמת ST)', 'נמק: מות הרקמה ויצירת צלקת'], onDone: done }) },
       { title: 'קוראים א.ק.ג', run: (box, done) => runQuiz(box, { finish: (p) => done(p) }, ecgItems(shuffle(['sinus', 'ste', 'std', 'ste']), 'mi_dx', ['sinus', 'ste', 'std'], 5)) },
@@ -166,6 +167,7 @@ registerGame({
   teacherNote: 'סעיף 4.2 בתוכנית וספר הקליניקה (פרק 3). שלבים: טבלת "נחשו לפני שחושפים" (שמאלית מול ימנית), שאלות. לפי הספר, בלבול נובע מאספקה לקויה של דם עשיר בחמצן למוח (אי-ספיקה שמאלית), וירידה בסיבולת למאמץ נוגעת לשני הצדדים, ולכן לא נכללה בטבלה.',
   mount(root, ctx) {
     root.insertAdjacentHTML('afterbegin', say('כשחדר מפסיק לשאוב, הדם "עומד בתור" אחריו. השאלה: איפה התור?', 'think'));
+    root.insertAdjacentHTML('beforeend', artFigs([['xray_normal', 'צילום חזה תקין'], ['xray_edema', 'לב מוגדל ובצקת ריאות'], ['echo_normal', 'אקו לב תקין'], ['echo_dilated', 'אקו: חדר שמאלי מורחב']], 'כך נראים צילום חזה ואקו לב (לחצו להגדלה):'));
     runStages(root, ctx, [
       { title: 'איפה התור?', run: (box, done) => predictTable(box, { tag: 'hf', cols: ['אי-ספיקה שמאלית', 'אי-ספיקה ימנית'], rows: [
         { label: 'קוצר נשימה וחרחורים בריאות', why: 'חדר שמאל לא מפנה את הדם שמגיע מהריאות, ולכן הוא מצטבר בהן.', cells: [{ opts: ['כן', 'לא'], ok: 0 }, { opts: ['כן', 'לא'], ok: 1 }] },
@@ -246,6 +248,7 @@ registerGame({
   teacherNote: 'סעיף 5.4 בתוכנית וספר הקליניקה (פרק 5): CVA איסכמי והמורגי, TIA, Hemiplegia, Hemiparesis, Aphasia, Aneurysm (מפרצת, כולל מפרצת אבי העורקים). הפגיעה בצד הגוף הנגדי לצד המוח הפגוע (ראה בספר). שלבים: התאמת מושגים, מיון, שאלות. הערה: ההגדרה של TIA (פחות מ-24 שעות) היא כפי שבספר. כיום מגדירים לפי היעדר נזק בהדמיה, בלי סף שעות קבוע.',
   mount(root, ctx) {
     root.insertAdjacentHTML('afterbegin', say('במוח, כל דקה בלי דם עולה במוחות. בואו נלמד את המילים של האירוע המוחי ונבדיל בין הסוגים.', 'think'));
+    root.insertAdjacentHTML('beforeend', artFigs([['ct_normal', 'CT מוח תקין'], ['ct_ischemic', 'אירוע איסכמי: אזור כהה'], ['ct_hemorrhage', 'דימום: אזור לבן בהיר']], 'כך נראה CT מוח (לחצו להגדלה):'));
     runStages(root, ctx, [
       { title: 'מה המושג?', run: (box, done) => matchGame(box, { tag: 'cva', leftTitle: 'מושג', rightTitle: 'הסבר', pairs: [
         ['אירוע מוחי איסכמי', 'קריש או תסחיף שחוסם עורק במוח'],
@@ -277,6 +280,7 @@ registerGame({
   teacherNote: 'מחבר בין סעיפים 3.1, 4.3, 5.1 ו-5.4 בתוכנית: טרשת עורקים ויתר לחץ דם כפוגעים באברי מטרה. הקטע האינטראקטיבי: לחיצה על איבר מציגה כרטיס. אין איור גוף אמיתי עדיין, ויתווסף בסבב האיורים.',
   mount(root, ctx) {
     root.insertAdjacentHTML('afterbegin', say('העורקים נמצאים בכל מקום, ולכן גם הנזק. לחצו על כל איבר כדי לראות מה קורה בו.', 'wink'));
+    root.insertAdjacentHTML('beforeend', artFigs([['body_athero', 'מקומות נפוצים לטרשת עורקים בגוף: צוואר, לב, כליות ורגליים']]));
     runStages(root, ctx, [
       { title: 'האיברים', run: (box, done) => {
         const O = [

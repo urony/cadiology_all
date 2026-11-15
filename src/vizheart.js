@@ -87,6 +87,16 @@ Object.assign(LABEL_SETS, {
   ] },
 });
 
+/* ---------- איורים אמיתיים (art/anat_*) במקום התרשימים בקוד. הנקודות מכוילות באחוזים על כל תמונה. אם התמונה לא נטענת, מוצגת הודעה בתוך המשחק ---------- */
+function useImage(key, img, ratio, maxW, pts) {
+  const S = LABEL_SETS[key]; delete S.svg; S.img = img; S.ratio = ratio; S.maxW = maxW;
+  S.parts.forEach((p, i) => { p.x = pts[i][0]; p.y = pts[i][1]; });
+}
+useImage('chambers', 'anat_heart_cut', 900 / 818, 420, [[25, 41], [33, 63], [66, 37], [64, 68], [50, 66]]);
+useImage('valves', 'anat_heart_cut', 900 / 818, 420, [[33, 50], [62, 46], [53, 30], [36, 27]]);
+useImage('vessels', 'anat_heart', 900 / 850, 400, [[47, 14], [50, 29], [28, 8], [29, 89], [15, 41]]);
+useImage('coronary', 'anat_coronary', 1, 400, [[39, 17], [48, 34], [27, 46], [57, 53]]);
+
 /* ---------- אק"ג: פעימה מסומנת (לגרירת תוויות) ---------- */
 function ecgBeatSVG() {
   const W = 440, H = 260, y0 = 150, A = 100;

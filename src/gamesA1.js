@@ -105,7 +105,7 @@ registerGame({
         ['מיוקרדיום', 'שכבת השריר שמתכווצת ודוחפת דם'],
         ['פריקרדיום', 'כיס שעוטף את הלב ומגן עליו מבחוץ'],
       ], onDone: done }) },
-      { title: 'עורק, וריד ונים', run: (box, done) => { box.insertAdjacentHTML('beforeend', `<div class="card center"><div style="max-width:420px;margin:auto">${vesselsSVG()}</div><div class="small muted">חתכים של עורק (שריר עבה), וריד (שריר דק) ונים (שכבה אחת).</div></div>`); predictTable(box, { tag: 'vessel_types', cols: ['עורק', 'וריד', 'נים'], rows: [
+      { title: 'עורק, וריד ונים', run: (box, done) => { box.insertAdjacentHTML('beforeend', `<div class="card center"><div style="max-width:420px;margin:auto">${ART.anat_vessels ? `<img class="zoomable" src="${ART.anat_vessels}" alt="עורק, וריד ונים" style="width:100%">` : vesselsSVG()}</div><div class="small muted">חתכים של עורק (שריר עבה), וריד (שריר דק) ונים (שכבה אחת).</div></div>`); predictTable(box, { tag: 'vessel_types', cols: ['עורק', 'וריד', 'נים'], rows: [
         { label: 'עובי שכבת השריר (מדיה)', why: 'בעורק הלחץ גבוה ולכן השריר עבה. בוריד הלחץ נמוך והשכבה דקה. בנים אין שריר בכלל.', cells: [{ opts: ['עבה', 'דקה', 'אין'], ok: 0 }, { opts: ['עבה', 'דקה', 'אין'], ok: 1 }, { opts: ['עבה', 'דקה', 'אין'], ok: 2 }] },
         { label: 'כמה שכבות יש בדופן?', why: 'עורק ווריד בנויים משלוש שכבות, ונים רק מאנדותל (אינטימה) אחד.', cells: [{ opts: ['שלוש', 'אחת'], ok: 0 }, { opts: ['שלוש', 'אחת'], ok: 0 }, { opts: ['שלוש', 'אחת'], ok: 1 }] },
         { label: 'הלחץ בכלי', why: 'הלחץ בעורקים הוא הגבוה ביותר, והוא יורד לאורך הנימים ועד הוורידים.', cells: [{ opts: ['גבוה', 'נמוך'], ok: 0 }, { opts: ['גבוה', 'נמוך'], ok: 1 }, { opts: ['גבוה', 'נמוך'], ok: 1 }] },

@@ -86,6 +86,11 @@ function lightbox(src) {
 document.addEventListener('click', e => { const im = e.target.closest('.fig img, img.avatar, img.zoomable'); if (im) lightbox(im.src); });
 
 /* תוויות עבריות מעל/מתחת לאיורים חדשים: x,y באחוזים; row = שורת עמודות מתחת; legend = רשימה ממוספרת */
+/* איורים מתיקיית art: מערך של [שם, כיתוב]. אם אין תמונה, לא מציג כלום (אין נפילה) */
+function artFigs(items, title) {
+  const ok = items.filter(x => ART[x[0]]); if (!ok.length) return '';
+  return `<div class="card">${title ? `<p class="instr">${title}</p>` : ''}<div class="row" style="flex-wrap:wrap;gap:8px;align-items:flex-start">${ok.map(x => `<figure class="fig" style="flex:1 1 ${ok.length > 2 ? 135 : 200}px;margin:0"><img loading="lazy" src="${ART[x[0]]}" alt="${esc(x[1])}"><figcaption>${esc(x[1])}</figcaption></figure>`).join('')}</div></div>`;
+}
 const FIGX = {};
 function fig(name, cap) {
   const src = IMG[name] || ('assets/' + name + '.webp'), X = FIGX[name];
