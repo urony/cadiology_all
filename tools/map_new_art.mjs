@@ -12,6 +12,7 @@ const MAP = [
   ['fc89d51b', 'anat_heart', 900], ['7b5a035e', 'anat_heart_cut', 900], 
   ['23fe7980', 'anat_coronary', 900], ['fa69d88f', 'anat_vessels', 1000], ['6d37c8ca', 'anat_conduction', 900], ['c55d1e14', 'anat_valves', 800], 
   ['e30e1ec9', 'plaque_1', 640], ['54b67e24', 'plaque_2', 640], ['c7844214', 'plaque_3', 640], ['da9f7ce6', 'plaque_4', 640],
+  ['חתך בלב', 'heart_cut', 1000], ['כלליים ועוד', 'heart_coronary', 1000], ['angio_normal', 'angio_normal', 700], ['angio_stenosis', 'angio_stenosis', 700], ['stress_test', 'stress_test', 700], ['holter', 'holter', 600], ['stent', 'stent', 700], ['CABG', 'cabg', 700],
   ['e9dd1af4', 'mi_heart', 800], ['e2505d80', 'body_athero', 800],
   ['57d80a38', 'echo_normal', 800], ['a45dcd8f', 'echo_dilated', 800],
   ['b115bae3', 'xray_normal', 800], ['f76eb3e5', 'xray_edema', 800],

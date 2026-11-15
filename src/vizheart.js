@@ -68,52 +68,50 @@ Object.assign(LABEL_SETS, {
   ]) },
 });
 
-/* ---------- עורקים כליליים: תרשים נפרד ---------- */
-function coronarySVG() {
-  return `<svg class="heartsvg" viewBox="0 0 440 460" role="img" aria-label="עורקים כליליים" xmlns="http://www.w3.org/2000/svg">
-  <path d="M60,160 Q50,300 190,430 Q260,440 340,360 Q390,270 350,150 Q320,90 250,110 Q215,60 160,100 Q90,100 60,160 Z" fill="#f3c9c4" stroke="#b86a63" stroke-width="3"/>
-  <path d="M215,40 Q220,100 236,112" stroke="${RED}" stroke-width="34" fill="none"/><path d="M180,60 Q160,100 176,120" stroke="${BLUE}" stroke-width="30" fill="none"/>
-  <g fill="none" stroke-linecap="round"><path d="M232,118 Q252,150 262,200 Q270,300 250,400" stroke="#8f1230" stroke-width="7"/><path d="M236,120 Q300,120 345,180 Q362,250 340,300" stroke="#c4284a" stroke-width="6"/><path d="M222,116 Q150,110 98,170 Q78,260 130,350 Q150,390 175,418" stroke="#6b1030" stroke-width="7"/></g>
-  <circle cx="249" cy="132" r="7" fill="#fff" stroke="#8f1230" stroke-width="2"/>
-  </svg>`;
-}
-const CP = (x, y) => HP(x, y);
-Object.assign(LABEL_SETS, {
-  coronary: { svg: coronarySVG(), ratio: 440 / 460, maxW: 380, title: 'העורקים הכליליים', tag: 'coronary', parts: [
-    { l: 'אבי העורקים', e: 'Aorta', ha: ['אבי עורקים', 'אאורטה'], x: CP(218, 56)[0], y: CP(218, 56)[1], d: 'מכאן יוצאים העורקים הכליליים, מיד אחרי המסתם.' },
-    { l: 'עורק כלילי שמאלי', e: 'Left coronary artery', ha: ['עורק כלילי שמאל', 'עורק כלילי'], ea: ['LCA', 'left main'], x: CP(249, 132)[0], y: CP(249, 132)[1], d: 'יוצא מאבי העורקים ומתפצל לעורק היורד הקדמי ולעורק העוטף. מזין את רוב החדר השמאלי.' },
-    { l: 'עורק כלילי ימני', e: 'Right coronary artery', ha: ['עורק כלילי ימין', 'עורק כלילי'], ea: ['RCA'], x: CP(120, 260)[0], y: CP(120, 260)[1], d: 'מזין את העלייה והחדר הימניים ואת החלק התחתון של הלב.' },
-    { l: 'העורק היורד הקדמי', e: 'Left anterior descending (LAD)', ha: ['יורד קדמי', 'עורק יורד קדמי'], ea: ['LAD', 'left anterior descending artery'], x: CP(268, 270)[0], y: CP(268, 270)[1], d: 'יורד לאורך המחיצה אל קצה הלב. חסימה בו פוגעת באזור הקדמי של החדר השמאלי, והיא מסוכנת במיוחד.' },
-  ] },
-});
-
-/* ---------- איורים אמיתיים (art/anat_*) במקום התרשימים בקוד. הנקודות מכוילות באחוזים על כל תמונה. אם התמונה לא נטענת, מוצגת הודעה בתוך המשחק ---------- */
+/* ---------- איורים אמיתיים במקום התרשימים בקוד. הנקודות מכוילות באחוזים על כל תמונה ---------- */
 function useImage(key, img, ratio, maxW, pts) {
   const S = LABEL_SETS[key]; delete S.svg; S.img = img; S.ratio = ratio; S.maxW = maxW;
   S.parts.forEach((p, i) => { p.x = pts[i][0]; p.y = pts[i][1]; });
 }
-useImage('chambers', 'anat_heart_cut', 900 / 818, 420, [[25, 41], [33, 63], [66, 37], [64, 68], [50, 66]]);
-useImage('valves', 'anat_valves', 1, 380, [[27, 62], [73, 64], [48, 42], [48, 14]]);
-useImage('vessels', 'anat_heart', 900 / 850, 400, [[47, 14], [50, 29], [28, 8], [29, 89], [15, 41]]);
-useImage('coronary', 'anat_coronary', 1, 400, [[39, 17], [48, 34], [27, 46], [57, 53]]);
+/* החדרים, המסתמים וכלי הדם הגדולים מתויגים על אותו חתך אמיתי של הלב (heart_cut), והכליליים על איור הלב מלפנים (heart_coronary) */
+useImage('chambers', 'heart_cut', 1, 440, [[29, 41], [34, 78], [66, 38], [72, 75], [52, 72]]);
+useImage('valves', 'heart_cut', 1, 460, [[29, 60], [68, 54], [54, 52], [43, 48]]);
+useImage('vessels', 'heart_cut', 1, 440, [[45, 11], [55, 27], [24, 25], [20, 86], [84, 33]]);
+LABEL_SETS.coronary = { img: 'heart_coronary', ratio: 1, maxW: 440, title: 'העורקים והוורידים הכליליים', tag: 'coronary', parts: [
+  { l: 'אבי העורקים', e: 'Aorta', ha: ['אבי עורקים', 'אאורטה'], x: 47, y: 15, d: 'מכאן יוצאים העורקים הכליליים, מיד אחרי מסתם אבי העורקים.' },
+  { l: 'עורק הריאה', e: 'Pulmonary artery', ha: ['עורקי הריאה', 'עורק ריאתי'], ea: ['pulmonary trunk'], x: 60, y: 22, d: 'יוצא מהחדר הימני אל הריאות. העורק הכלילי השמאלי עובר מאחוריו.' },
+  { l: 'וריד חלול עליון', e: 'Superior vena cava', ha: ['וריד נבוב עליון', 'וריד חלול עליון'], ea: ['svc'], x: 32, y: 12, d: 'מחזיר דם דל בחמצן מהחלק העליון של הגוף אל העלייה הימנית.' },
+  { l: 'עורק כלילי ימני', e: 'Right coronary artery', ha: ['עורק כלילי ימין', 'עורק כלילי'], ea: ['RCA'], x: 39.5, y: 44, d: 'יוצא מאבי העורקים ועובר לימין. מזין את העלייה והחדר הימניים ואת החלק התחתון של הלב.' },
+  { l: 'עורק כלילי שמאלי', e: 'Left coronary artery', ha: ['עורק כלילי שמאל', 'עורק כלילי'], ea: ['LCA', 'left main'], x: 59, y: 36, d: 'יוצא מאבי העורקים ועובר לשמאל, מאחורי עורק הריאה. מזין את רוב החדר השמאלי.' },
+  { l: 'ורידים כליליים', e: 'Cardiac veins', ha: ['וריד כלילי', 'ורידי הלב', 'ורידים כלילים'], ea: ['coronary veins', 'coronary vein', 'cardiac vein'], x: 59, y: 62.5, d: 'אוספים את הדם הדל בחמצן משריר הלב ומחזירים אותו אל העלייה הימנית.' },
+  { l: 'עלייה ימנית', e: 'Right atrium', ha: ['פרוזדור ימני'], x: 26, y: 40, d: 'מקבלת דם דל בחמצן מהגוף ומהוורידים הכליליים.' },
+  { l: 'חדר ימני', e: 'Right ventricle', ha: [], x: 36, y: 65, d: 'דוחף דם דל בחמצן אל הריאות.' },
+  { l: 'חדר שמאלי', e: 'Left ventricle', ha: [], x: 74, y: 74, d: 'דוחף דם עשיר בחמצן אל כל הגוף. הוא הזקוק ביותר לאספקת דם דרך העורקים הכליליים.' },
+] };
 
 /* ---------- אק"ג: פעימה מסומנת (לגרירת תוויות) ---------- */
+/* ערך האות (יחסי) בזמן t (שניות) בפעימה אחת: P, QRS, T */
+function ecgBeatFn(t) {
+  const g = (t, c, s, a) => a * Math.exp(-((t - c) * (t - c)) / (2 * s * s));
+  return g(t, .16, .035, .13) + g(t, .295, .010, -.1) + g(t, .31, .014, 1) + g(t, .335, .012, -.22) + g(t, .58, .05, .3);
+}
 function ecgBeatSVG() {
   const W = 440, H = 260, y0 = 150, A = 100;
-  const g = (t, c, s, a) => a * Math.exp(-((t - c) * (t - c)) / (2 * s * s));
-  const f = t => g(t, .16, .035, .13) + g(t, .295, .010, -.1) + g(t, .31, .014, 1) + g(t, .335, .012, -.22) + g(t, .58, .05, .3);
+  const f = ecgBeatFn;
   let d = ''; for (let i = 0; i <= 400; i++) { const t = i / 400 * .85, x = 20 + 400 * i / 400, y = y0 - A * f(t); d += (i ? 'L' : 'M') + x.toFixed(1) + ',' + y.toFixed(1); }
   return `<svg class="heartsvg ecgsvg" viewBox="0 0 ${W} ${H}" role="img" aria-label="פעימת א.ק.ג אחת" xmlns="http://www.w3.org/2000/svg"><rect width="${W}" height="${H}" fill="#fff8f7"/>${ecgGrid(W, H, 20, 100)}<path d="${d}" fill="none" stroke="#1d1d1d" stroke-width="2.6" stroke-linejoin="round"/></svg>`;
 }
 function ecgGrid(W, H, big, _) { let s = ''; for (let x = 0; x <= W; x += big / 5) s += `<line x1="${x}" y1="0" x2="${x}" y2="${H}" stroke="#f3c9c4" stroke-width="${x % big === 0 ? 1.1 : .5}"/>`; for (let y = 0; y <= H; y += big / 5) s += `<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="#f3c9c4" stroke-width="${y % big === 0 ? 1.1 : .5}"/>`; return s; }
 const EP = (tt, v) => { const x = 20 + 400 * (tt / .85), y = 150 - 100 * v; return [Math.round(1000 * x / 440) / 10, Math.round(1000 * y / 260) / 10]; };
+/* נקודת תווית ליד הקו (לא עליו): (tx,ty) הוא המקום על הקו, (x,y) המקום של הנקודה, ובינהם קו דק */
+const DOT = (tt, v, dx, dy) => { const [tx, ty] = EP(tt, v); return { tx, ty, x: tx + dx, y: ty + dy }; };
 Object.assign(LABEL_SETS, {
   ecgbeat: { svg: ecgBeatSVG(), ratio: 440 / 260, maxW: 400, title: 'גלים ומקטעים בא.ק.ג', tag: 'ecg_wave', parts: [
-    { l: 'גל P', e: 'P wave', ha: ['גל פי', 'P'], ea: ['p'], x: EP(.16, .16)[0], y: EP(.16, .2)[1], d: 'דפולריזציה של העליות: האות החשמלי עובר מקוצב הלב (SA) אל שתי העליות.' },
-    { l: 'מקטע PR', e: 'PR segment', ha: ['מקטע PR', 'פי אר'], ea: ['pr interval', 'pr'], x: EP(.235, 0)[0], y: EP(.235, -.1)[1], d: 'השהיה קצרה בצומת AV, לפני שהאות עובר לחדרים.' },
-    { l: 'קומפלקס QRS', e: 'QRS complex', ha: ['גל QRS', 'QRS', 'קומפלקס'], ea: ['qrs'], x: EP(.318, .75)[0], y: EP(.318, .75)[1], d: 'דפולריזציה של החדרים: מיד אחריה החדרים מתכווצים (סיסטולה).' },
-    { l: 'מקטע ST', e: 'ST segment', ha: ['מקטע ST', 'אס טי'], ea: ['st'], x: EP(.42, 0)[0], y: EP(.42, -.1)[1], d: 'החדרים כולם מופעלים. הרמה או ירידה בו מעידות על פגיעה באספקת הדם לשריר הלב.' },
-    { l: 'גל T', e: 'T wave', ha: ['גל טי', 'T'], ea: ['t'], x: EP(.58, .3)[0], y: EP(.58, .38)[1], d: 'רפולריזציה של החדרים: החדרים חוזרים למצב מנוחה ומתרפים (דיאסטולה).' },
+    { l: 'גל P', e: 'P wave', ha: ['גל פי', 'P'], ea: ['p'], ...DOT(.16, .13, 0, -21), d: 'דפולריזציה של העליות: האות החשמלי עובר מקוצב הלב (SA) אל שתי העליות.' },
+    { l: 'מקטע PR', e: 'PR segment', ha: ['מקטע PR', 'פי אר'], ea: ['pr interval', 'pr'], ...DOT(.235, 0, 0, 17), d: 'השהיה קצרה בצומת AV, לפני שהאות עובר לחדרים.' },
+    { l: 'קומפלקס QRS', e: 'QRS complex', ha: ['גל QRS', 'QRS', 'קומפלקס'], ea: ['qrs'], ...DOT(.31, 1, 11, -3), d: 'דפולריזציה של החדרים: מיד אחריה החדרים מתכווצים (סיסטולה).' },
+    { l: 'מקטע ST', e: 'ST segment', ha: ['מקטע ST', 'אס טי'], ea: ['st'], ...DOT(.42, 0, 0, 17), d: 'החדרים כולם מופעלים. הרמה או ירידה בו מעידות על פגיעה באספקת הדם לשריר הלב.' },
+    { l: 'גל T', e: 'T wave', ha: ['גל טי', 'T'], ea: ['t'], ...DOT(.58, .3, 0, -21), d: 'רפולריזציה של החדרים: החדרים חוזרים למצב מנוחה ומתרפים (דיאסטולה).' },
   ] },
 });
 
@@ -148,7 +146,8 @@ function ecgTrace(spec = {}, o = {}) {
     pts.push([12 + px, y0 - A * v]);
   }
   d = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('');
-  return `<svg class="ecgsvg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.label || 'רצועת א.ק.ג')}" xmlns="http://www.w3.org/2000/svg"><rect width="${W}" height="${H}" fill="#fff8f7" rx="8"/>${ecgGrid(W, H, 25)}<path d="${d}" fill="none" stroke="#1d1d1d" stroke-width="2" stroke-linejoin="round"/></svg>`;
+  let marks = ''; if (o.marks) { let n = 0; Rs.forEach(R => { const x = 12 + R * ppx; if (R > 0 && x < W - 12) { n++; marks += `<line x1="${x.toFixed(1)}" y1="22" x2="${x.toFixed(1)}" y2="${(y0 - A - 4).toFixed(1)}" stroke="#c0334d" stroke-width="1.6" stroke-dasharray="4 3"/><circle cx="${x.toFixed(1)}" cy="14" r="11" fill="#c0334d"/><text x="${x.toFixed(1)}" y="19" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">${n}</text>`; } }); }
+  return `<svg class="ecgsvg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.label || 'רצועת א.ק.ג')}" xmlns="http://www.w3.org/2000/svg"><rect width="${W}" height="${H}" fill="#fff8f7" rx="8"/>${ecgGrid(W, H, 25)}<path d="${d}" fill="none" stroke="#1d1d1d" stroke-width="2" stroke-linejoin="round"/>${marks}</svg>`;
 }
 
 /* ---------- שכבות דופן כלי הדם: עורק, וריד, נים ---------- */
@@ -169,21 +168,40 @@ function plaqueSVG(stage) {
   ${stage === 3 ? '<ellipse cx="60" cy="56" rx="12" ry="9" fill="#a8142f" opacity=".85"/>' : ''}</svg>`;
 }
 
-/* ---------- סימולטור תפוקת לב ולחץ דם ---------- */
+/* ---------- סימולטור תפוקת לב ולחץ דם: לב מונפש שפועם בקצב שנבחר, גדל לפי נפח הפעימה ומזרים טיפות ---------- */
 function coSim(root, o = {}) {
   const host = el('<div class="card"></div>'); root.appendChild(host);
   let hr = 70, sv = 70, res = 100;
-  function draw() {
+  const drops = [0, 1, 2, 3, 4, 5].map(k => `<circle class="co-drop" data-k="${k}" cx="170" cy="92" r="5" fill="#d83a4a"/>`).join('');
+  host.innerHTML = `<p class="instr">הזיזו את הסליידרים ונחשו לפני שמסתכלים: מה קורה לתפוקת הלב ולחץ הדם? הלב פועם בקצב שבחרתם.</p>
+    <svg class="co-svg" viewBox="0 0 330 190" role="img" aria-label="לב מונפש: קצב הפעימות ונפח הפעימה משתנים לפי הסליידרים" xmlns="http://www.w3.org/2000/svg">
+      <path id="copipe" d="M168,92 H318" stroke="#e8b8b0" stroke-width="30" stroke-linecap="round" fill="none"/>
+      <path id="copipe2" d="M168,92 H318" stroke="#fdeeea" stroke-width="22" stroke-linecap="round" fill="none"/>
+      ${drops}
+      <g class="co-size"><g class="co-beat">
+        <path d="M82,172 C14,118 8,56 52,44 C74,38 86,52 90,62 C94,52 108,38 130,44 C174,56 166,118 98,172 Z" fill="#d83a4a" stroke="#8a1f2b" stroke-width="3"/>
+        <path d="M44,70 C48,56 62,52 72,60" stroke="#f3a3ab" stroke-width="6" fill="none" stroke-linecap="round" opacity=".8"/>
+      </g></g>
+    </svg>
+    <div class="sl"><label>דופק (פעימות בדקה): <b id="lhr"></b></label><input type="range" id="shr" min="40" max="180" value="${hr}"></div>
+    <div class="sl"><label>נפח פעימה (מ״ל): <b id="lsv"></b></label><input type="range" id="ssv" min="40" max="110" value="${sv}"></div>
+    <div class="sl"><label>התנגדות כלי הדם: <b id="lres"></b></label><input type="range" id="sres" min="60" max="160" value="${res}"></div>
+    <div class="kpi"><div><b id="kco"></b><span>תפוקת לב (ל׳/דקה)</span></div><div><b id="kbp"></b><span>לחץ דם משוער (להמחשה)</span></div></div>
+    <div class="small muted">תפוקת הלב = דופק × נפח פעימה. בבריא במנוחה: כ-70 × 70 מ״ל = כ-5 ליטר בדקה. הלב גדל בציור כשנפח הפעימה גדל, והטיפות מראות כמה דם יוצא בכל פעימה. לחץ דם מושפע מתפוקת הלב ומההתנגדות של כלי הדם (ולכן הערכים כאן להמחשה בלבד).</div>`;
+  const svg = $('.co-svg', host), q = id => $(id, host);
+  function update() {
     const co = hr * sv / 1000, sys = Math.round(60 + co * 12 + res * .25), dia = Math.round(40 + res * .35);
-    host.innerHTML = `<p class="instr">הזיזו את הסליידרים ונחשו לפני שמסתכלים: מה קורה לתפוקת הלב ולחץ הדם?</p>
-      <div class="sl"><label>דופק (פעימות בדקה): <b>${hr}</b></label><input type="range" id="shr" min="40" max="180" value="${hr}"></div>
-      <div class="sl"><label>נפח פעימה (מ״ל): <b>${sv}</b></label><input type="range" id="ssv" min="40" max="110" value="${sv}"></div>
-      <div class="sl"><label>התנגדות כלי הדם: <b>${res < 80 ? 'נמוכה (כלי דם מורחבים)' : res > 125 ? 'גבוהה (כלי דם מכווצים)' : 'תקינה'}</b></label><input type="range" id="sres" min="60" max="160" value="${res}"></div>
-      <div class="kpi"><div><b>${(co).toFixed(1)}</b><span>תפוקת לב (ל׳/דקה)</span></div><div><b>${sys}/${dia}</b><span>לחץ דם משוער (להמחשה)</span></div></div>
-      <div class="small muted">תפוקת הלב = דופק × נפח פעימה. בבריא במנוחה: כ-70 × 70 מ״ל = כ-5 ליטר בדקה. לחץ דם מושפע מתפוקת הלב ומההתנגדות של כלי הדם (ולכן הערכים כאן להמחשה בלבד).</div>`;
-    $('#shr', host).oninput = e => { hr = +e.target.value; draw(); $('#shr', host).focus(); }; $('#ssv', host).oninput = e => { sv = +e.target.value; draw(); $('#ssv', host).focus(); }; $('#sres', host).oninput = e => { res = +e.target.value; draw(); $('#sres', host).focus(); };
+    svg.style.setProperty('--d', (60 / hr).toFixed(3) + 's');
+    svg.style.setProperty('--s', (0.78 + (sv - 40) / 70 * 0.4).toFixed(3));
+    const w = Math.round(34 - (res - 60) / 100 * 18); ['#copipe', '#copipe2'].forEach((id, k) => q(id).setAttribute('stroke-width', k ? w - 8 : w));
+    const cnt = Math.max(2, Math.round(sv / 20)), rr = 3.2 + (sv - 40) / 70 * 3.3;
+    $$('.co-drop', host).forEach((d, k) => { d.style.display = k < cnt ? '' : 'none'; d.setAttribute('r', rr.toFixed(1)); d.style.animationDelay = (-(60 / hr) * k / cnt).toFixed(3) + 's'; });
+    q('#lhr').textContent = hr; q('#lsv').textContent = sv;
+    q('#lres').textContent = res < 80 ? 'נמוכה (כלי דם מורחבים)' : res > 125 ? 'גבוהה (כלי דם מכווצים)' : 'תקינה';
+    q('#kco').textContent = co.toFixed(1); q('#kbp').textContent = sys + '/' + dia;
     if (o.onChange) o.onChange({ hr, sv, res, co });
   }
-  draw();
+  q('#shr').oninput = e => { hr = +e.target.value; update(); }; q('#ssv').oninput = e => { sv = +e.target.value; update(); }; q('#sres').oninput = e => { res = +e.target.value; update(); };
+  update();
   const go = el('<button class="btn primary block" style="margin-top:12px">המשך ←</button>'); host.parentNode.appendChild(go); go.onclick = () => o.onDone && o.onDone(100);
 }

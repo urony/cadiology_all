@@ -1,10 +1,8 @@
 'use strict';
 /* ===== חלק א׳ – מחלות הלב וכלי הדם (סעיפים 3.1–3.4, 4.1–4.3, 5.4 בתוכנית; ספר הקליניקה הרשמי) ===== */
 
-/* רצועות א.ק.ג לזיהוי: מחזיר שאלות. kinds: sinus | af | vf | ste | std */
-function ecgItems(kinds, tag, optKinds, seedBase = 3) {
-  return kinds.map((k, i) => Q('איזו רצועת א.ק.ג זו?', tag, optKinds.map(o => (o === k ? OK(ECG_NAMES[o], ECG_WHY[o]) : NO(ECG_NAMES[o], 'זה לא הממצא ברצועה. ' + ECG_WHY[k]))), { vis: `<div class="card flat" style="padding:6px">${ecgTrace({ type: k, hr: k === 'vf' ? 0 : 75, seed: seedBase + i * 13 }, { sec: 4, label: 'רצועת א.ק.ג' })}</div>` }));
-}
+/* האנימציות קצרות כשהבוט בודק (window.__fast) */
+const animMs = ms => (window.__fast ? 20 : ms);
 
 /* ---------- טרשת עורקים ---------- */
 registerGame({
@@ -18,7 +16,45 @@ registerGame({
   mount(root, ctx) {
     root.insertAdjacentHTML('afterbegin', say('טרשת עורקים היא סרט איטי שנמשך שנים, ובסוף יש פיצוץ פתאומי. בואו נראה איך זה מתחיל.', 'think'));
     runStages(root, ctx, [
-      { title: 'ארבעה שלבים', run: (box, done) => { box.insertAdjacentHTML('beforeend', `<div class="card"><p class="instr">חתך של עורק כלילי בארבעה שלבים:</p><div class="row" style="flex-wrap:wrap;gap:6px">${['דופן תקינה', 'פלאק מתחיל', 'היצרות', 'קריש חוסם'].map((t, k) => `<div style="flex:1 1 ${ART.plaque_1 ? 45 : 20}%;text-align:center"><div>${ART['plaque_' + (k + 1)] ? `<img class="zoomable" src="${ART['plaque_' + (k + 1)]}" alt="${t}" style="width:100%;border-radius:12px">` : plaqueSVG(k)}</div><div class="small"><b>${t}</b></div></div>`).join('')}</div><button class="btn primary block" id="pgo" style="margin-top:10px">המשך ←</button></div>`); $('#pgo', box).onclick = () => done(100); } },
+      { title: 'מה בכל תמונה?', run: (box, done) => {
+        const names = ['דופן תקינה', 'פלאק מתחיל', 'היצרות', 'קריש חוסם'];
+        const whys = ['דופן חלקה ואין רובד: החלל פתוח לגמרי.', 'רובד קטן של שומן מתחת לשכבה הפנימית: החלל עדיין כמעט פתוח.', 'הרובד גדל ומצר את החלל: הדם עובר בקושי, ובמאמץ מופיעה תעוקה.', 'הרובד נקרע ונוצר קריש שחוסם את החלל: אוטם.'];
+        const order = shuffle([0, 1, 2, 3]), letters = ['א', 'ב', 'ג', 'ד'];
+        let tries = 0, firstCorrect = 0;
+        const host = el('<div class="card"></div>'); box.appendChild(host);
+        host.innerHTML = `<p class="instr">ארבע תמונות של חתך בעורק כלילי, בסדר מעורבב. לכל תמונה בחרו באיזה שלב של המחלה היא נמצאת.</p><div class="row" style="flex-wrap:wrap;gap:8px">${order.map((k, j) => `<div style="flex:1 1 44%;text-align:center"><div style="font-weight:800">תמונה ${letters[j]}</div><div>${ART['plaque_' + (k + 1)] ? `<img class="zoomable" src="${ART['plaque_' + (k + 1)]}" alt="תמונה ${letters[j]}" style="width:100%;border-radius:12px">` : plaqueSVG(k)}</div><select data-j="${j}" style="width:100%;margin-top:4px;padding:8px;border-radius:10px;border:1.5px solid var(--line);font:inherit"><option value="">בחרו שלב</option>${names.map((n, i) => `<option value="${i}">${n}</option>`).join('')}</select></div>`).join('')}</div><div id="pfb" style="margin-top:8px"></div><button class="btn primary block" id="pck" style="margin-top:10px">בדיקה</button>`;
+        host._bot = () => { const sels = $$('select', host), need = sels.filter(x => x.value === '' || +x.value !== order[+x.dataset.j]); if (!need.length) return false; need.forEach(x => { x.value = String(order[+x.dataset.j]); }); $('#pck', host).click(); return true; };
+        $('#pck', host).onclick = () => {
+          const sels = $$('select', host); let ok = 0, empty = 0;
+          sels.forEach(s => { const j = +s.dataset.j; if (s.value === '') { empty++; return; } const good = +s.value === order[j]; s.style.borderColor = good ? 'var(--good)' : 'var(--bad,#c0334d)'; if (good) ok++; });
+          if (empty) { $('#pfb', host).innerHTML = '<div class="explain">בחרו שלב לכל תמונה ואז לחצו "בדיקה".</div>'; return; }
+          tries++; if (tries === 1) firstCorrect = ok;
+          if (ok === 4) { Snd.play('ok'); $('#pfb', host).innerHTML = `<div class="explain good"><b>נכון!</b><ol style="margin:6px 0 0;padding-inline-start:20px">${names.map((n, i) => `<li><b>${n}</b>: ${whys[i]}</li>`).join('')}</ol></div>`; const b = $('#pck', host); b.textContent = 'המשך ←'; b.onclick = () => done(Math.round(100 * firstCorrect / 4)); }
+          else { Store.mistake('athero'); Snd.play('no'); $('#pfb', host).innerHTML = `<div class="explain bad">${ok} מתוך 4 נכונות. התאמות שגויות מסומנות באדום, נסו שוב. רמז: ככל שהמחלה מתקדמת החלל הפתוח בעורק קטן יותר.</div>`; }
+        };
+      } },
+      { title: 'בונים פלאק', run: (box, done) => {
+        const host = el('<div class="card"></div>'); box.appendChild(host);
+        let years = 30; const on = new Set();
+        const OPTS = [['quit', 'הפסקת עישון'], ['statin', 'סטטין להורדת LDL'], ['bp', 'טיפול ביתר לחץ דם'], ['ex', 'פעילות אירובית קבועה'], ['diet', 'תזונה דלה בשומן רווי']];
+        const calc = () => { let r = 1.0 + 1.2 + 0.8; if (on.has('quit')) r -= 1.0; if (on.has('statin')) r -= 1.2 * .6; if (on.has('bp')) r -= .8 * .5; if (on.has('ex')) r *= .85; if (on.has('diet')) r *= .85; return Math.min(95, Math.round(years * r * .9)); };
+        function svgFor(p) {
+          const R0 = 64, lum = R0 * Math.sqrt(1 - p / 100), cy = 100 - (R0 - lum) * .7;
+          return `<svg viewBox="0 0 200 200" width="100%" style="max-width:260px;display:block;margin:auto" role="img" aria-label="חתך עורק כלילי עם היצרות של ${p} אחוז"><circle cx="100" cy="100" r="92" fill="#e8c8a8" stroke="#9a6a50" stroke-width="3"/><circle cx="100" cy="100" r="80" fill="#d97b7b"/><circle cx="100" cy="100" r="${R0}" fill="${p > 3 ? '#f2d377' : '#fff4f2'}" stroke="#b8902a" stroke-width="${p > 3 ? 2 : 0}"/><circle cx="100" cy="${cy.toFixed(1)}" r="${lum.toFixed(1)}" fill="#fff4f2"/>${p >= 90 ? `<ellipse cx="100" cy="${cy.toFixed(1)}" rx="${(lum * .9).toFixed(1)}" ry="${(lum * .8).toFixed(1)}" fill="#a8142f" opacity=".9"/>` : ''}</svg>`;
+        }
+        function draw() {
+          const p = calc(), msg = p < 25 ? ['good', 'החלל כמעט פתוח: בלי תסמינים. זו התוצאה שמחפשים.'] : p < 50 ? ['good', 'היצרות קלה: עדיין בדרך כלל בלי תסמינים, אבל חשוב להמשיך בטיפול.'] : p < 75 ? ['', 'היצרות משמעותית: במאמץ עלולה להופיע תעוקת חזה.'] : p < 90 ? ['bad', 'היצרות קשה: תעוקה יציבה, וסיכון גבוה לקרע בפלאק ולאוטם.'] : ['bad', 'כמעט חסימה: סכנה גבוהה לאוטם.'];
+          host.innerHTML = `<p class="instr">מטופל בן 55 מעשן, עם LDL גבוה ויתר לחץ דם. כמה שנים יעברו, ואילו טיפולים תבחרו? המטרה: לשמור על היצרות נמוכה (מתחת ל-40 אחוז).</p>${svgFor(p)}
+            <div class="kpi"><div><b>${p}%</b><span>היצרות העורק (להמחשה)</span></div><div><b>${years}</b><span>שנים</span></div></div>
+            <div class="sl"><label>כמה שנים עוברות: <b>${years}</b></label><input type="range" id="syr" min="0" max="40" value="${years}"></div>
+            <div class="small muted" style="margin:6px 0">בחרו טיפולים:</div><div class="row" style="flex-wrap:wrap;gap:6px">${OPTS.map(o => `<button class="btn ${on.has(o[0]) ? 'primary' : ''}" data-o="${o[0]}">${on.has(o[0]) ? '✓ ' : ''}${o[1]}</button>`).join('')}</div>
+            <div class="explain ${msg[0]}" style="margin-top:8px">${msg[1]}</div><div class="small muted">המספרים להמחשה בלבד. בפועל הקצב משתנה בין אנשים.</div><button class="btn primary block" id="pgo" style="margin-top:10px">המשך ←</button>`;
+          $('#syr', host).oninput = e => { years = +e.target.value; draw(); $('#syr', host).focus(); };
+          $$('[data-o]', host).forEach(b => b.onclick = () => { const k = b.dataset.o; on.has(k) ? on.delete(k) : on.add(k); draw(); });
+          $('#pgo', host).onclick = () => done(100);
+        }
+        draw();
+      } },
       { title: 'סדר ההתפתחות', run: (box, done) => orderGame(box, { tag: 'athero', hint: 'סדרו את שלבי התפתחות הרובד הטרשתי והאירוע החריף.', steps: ['פגיעה בשכבה הפנימית של העורק (האנדותל)', 'חדירת LDL מחומצן ותאי דלקת אל דופן העורק', 'תאי הדלקת בולעים כולסטרול והופכים לתאי קצף', 'נוצר פלאק ומצטבר בו גם סידן, והעורק מצטר', 'קרע בפלאק ויצירת קריש דם שחוסם את העורק'], onDone: done }) },
       { title: 'מי הכולסטרול ומי השומן?', run: (box, done) => binGame(box, { tag: 'lipids', buckets: ['LDL', 'HDL', 'טריגליצרידים'], title: 'בחרו מאפיין ואז לחצו על המולקולה שמתאימה לו.', items: [
         { t: 'מוביל כולסטרול מהכבד אל רקמות הגוף', b: 0, why: 'LDL מוביל כולסטרול לרקמות, ובעודף משקיע אותו בדפנות העורקים.' },
@@ -74,13 +110,12 @@ registerGame({
     'טיפול ראשוני (MONA): מורפין, חמצן, ניטרוגליצרין (מתחת ללשון) ואספירין. בבית החולים: צנתור (בלון וסטנט), ובמקרים מסוימים ניתוח מעקפים. מהר ככל האפשר.',
     'סיבוכי אוטם: אי-ספיקת לב, הפרעות קצב (פרפור פרוזדורים או חדרים), שוק לבבי (לחץ דם נמוך ודופק גבוה) וטמפונדה (נוזלים בקרום הלב). אוטם חוזר שכיח בעיקר בשנה הראשונה.'
   ],
-  teacherNote: 'סעיף 3.3 בתוכנית ופרק 2.3 בספר הקליניקה (הגדרה, שלבים, אבחון, MONA, סיבוכים). בתוכנית תשפ"ז נדרש טרופונין כסמן ושינוי ב-ST; ההבחנה STEMI/NSTEMI מופיעה בספר ובתוכנית תשפ"ו (STEMI: אוטם קשה, NSTEMI: פחות קשה). שלבים: סידור שלבי האוטם, זיהוי רצועות, שאלות. הערת רקע: MONA הוא מה שנלמד בספר ובתוכנית. בהנחיות העדכניות חמצן ניתן רק בסטורציה נמוכה, מורפין ניתן בזהירות, ויש תרופות נוספות (מעכב P2Y12, נוגד קרישה). גם ב-NSTEMI התוצאות ארוכות הטווח אינן טובות יותר, והעורק לרוב חסום חלקית או זמנית, בעוד שב-STEMI לרוב חסימה מלאה. הרצועות נוצרות בקוד.',
+  teacherNote: 'סעיף 3.3 בתוכנית ופרק 2.3 בספר הקליניקה (הגדרה, שלבים, אבחון, MONA, סיבוכים). זיהוי הרצועות נמצא בתחנת הא.ק.ג בסוף חלק המחלות. בתוכנית תשפ"ז נדרש טרופונין כסמן ושינוי ב-ST; ההבחנה STEMI/NSTEMI מופיעה בספר ובתוכנית תשפ"ו (STEMI: אוטם קשה, NSTEMI: פחות קשה). שלבים: סידור שלבי האוטם, שאלות. הערת רקע: MONA הוא מה שנלמד בספר ובתוכנית. בהנחיות העדכניות חמצן ניתן רק בסטורציה נמוכה, מורפין ניתן בזהירות, ויש תרופות נוספות (מעכב P2Y12, נוגד קרישה). גם ב-NSTEMI התוצאות ארוכות הטווח אינן טובות יותר, והעורק לרוב חסום חלקית או זמנית, בעוד שב-STEMI לרוב חסימה מלאה. הרצועות נוצרות בקוד.',
   mount(root, ctx) {
     root.insertAdjacentHTML('afterbegin', say('באוטם כל דקה חשובה: "זמן הוא שריר". בואו נראה מה קורה, איך מזהים, ומה עושים.', 'think'));
     root.insertAdjacentHTML('beforeend', artFigs([['mi_heart', 'לב עם אוטם: עורק כלילי סתום בקריש, ואזור בדופן החדר שנפגע (כהה)']]));
     runStages(root, ctx, [
       { title: 'שלבי האוטם', run: (box, done) => orderGame(box, { tag: 'mi', hint: 'סדרו את שלושת שלבי האוטם, מהמוקדם למאוחר.', steps: ['איסכמיה: ירידה באספקת הדם עקב היצרות', 'נזק: חסימה מלאה, וכאבים עזים (הרמת ST)', 'נמק: מות הרקמה ויצירת צלקת'], onDone: done }) },
-      { title: 'קוראים א.ק.ג', run: (box, done) => runQuiz(box, { finish: (p) => done(p) }, ecgItems(shuffle(['sinus', 'ste', 'std', 'ste']), 'mi_dx', ['sinus', 'ste', 'std'], 5)) },
       { title: 'שאלות', run: runQuizStage([
         Q('מה אומר טרופונין גבוה בדם?', 'mi_dx', [OK('תאי שריר הלב נהרסו ושחררו אותו לדם', 'בתעוקה (איסכמיה בלי נמק) הוא תקין.'), NO('העורקים הכליליים רק מצרים, בלי פגיעה בשריר', 'זה תיאור של תעוקה, שבה הטרופונין תקין.'), NO('רמת הכולסטרול בדם גבוהה מהרגיל', 'כולסטרול נמדד בבדיקה נפרדת.'), NO('לחץ הדם גבוה בצורה מסוכנת', 'לחץ דם נמדד בנפרד, והטרופונין אינו מדד לחץ.')]),
         Q('מה ההבדל בין STEMI ל-NSTEMI?', 'mi', [OK('ב-STEMI יש הרמת ST בא.ק.ג, ובאחר אין', 'הרמת ST מעידה על אוטם קשה יותר.'), NO('STEMI מופיע רק בגברים, ו-NSTEMI רק בנשים', 'אין הבחנה כזו. שני המינים יכולים לחלות.'), NO('ב-STEMI הטרופונין תקין, וב-NSTEMI גבוה', 'בשני סוגי האוטם הטרופונין עולה.'), NO('STEMI נגרם מפרפור, ו-NSTEMI מטרשת', 'שני סוגי האוטם נגרמים בעיקר מחסימת עורק כלילי.')]),
@@ -101,10 +136,30 @@ registerGame({
     'ניתוח מעקפים (CABG): כלי דם מושתל כנתיב חלופי עוקף את החסימה, כשאין אפשרות לפתוח בצנתור.',
     'בדיקות: הולטר (א.ק.ג ממושך), אקו לב (אולטרסאונד), מבחן מאמץ (ארגומטריה), א.ק.ג רגיל.'
   ],
-  teacherNote: 'סעיף 3.4 בתוכנית: צנתור לב, אנגיופלסטיה (בלון וסטנט), CABG, הולטר, אקו לב, ארגומטריה. שלבים: התאמה ושאלות. הערה: מעקפים נעשים כשאי אפשר לפתוח בצנתור בשל מורכבות המחלה הכלילית (כך בספר ובתוכנית). בפועל ההחלטה תלויה גם במספר העורקים הנגועים, בגזע העורק השמאלי ובסוכרת. הניסוחים בהתאמה נבחרו כך שאין מילים משותפות בין שני הצדדים.',
+  teacherNote: 'סעיף 3.4 בתוכנית: צנתור לב, אנגיופלסטיה (בלון וסטנט), CABG, הולטר, אקו לב, ארגומטריה. שלבים: זיהוי בדיקה ותוצאה מתמונה (תקין מול לא תקין), התאמה ושאלות. הערה: מעקפים נעשים כשאי אפשר לפתוח בצנתור בשל מורכבות המחלה הכלילית (כך בספר ובתוכנית). בפועל ההחלטה תלויה גם במספר העורקים הנגועים, בגזע העורק השמאלי ובסוכרת. הניסוחים בהתאמה נבחרו כך שאין מילים משותפות בין שני הצדדים.',
   mount(root, ctx) {
     root.insertAdjacentHTML('afterbegin', say('יש לנו ארגז כלים: בדיקות שמסתכלות על הלב מבחוץ, ופרוצדורות שפותחות עורקים מבפנים.', 'wink'));
     runStages(root, ctx, [
+      { title: 'מזהים בדיקה ותוצאה', run: (box, done) => {
+        const fig = (k, alt) => ART[k] ? `<div class="card flat center" style="padding:6px"><img class="zoomable" src="${ART[k]}" alt="${alt}" style="max-width:280px;width:100%;border-radius:12px"></div>` : '';
+        const RES = [
+          ['echo_normal', 'אקו לב: תקין', 'אקו לב (אולטרסאונד)', 'ארבעה מדורים בגודל תקין ודפנות בעובי תקין.'],
+          ['echo_dilated', 'אקו לב: חדר שמאלי מורחב ודפנות דקות', 'אקו לב (אולטרסאונד)', 'חדר שמאלי גדול מהרגיל עם דפנות דקות: מתאים לאי-ספיקת לב.'],
+          ['xray_normal', 'צילום חזה: לב בגודל תקין וריאות נקיות', 'צילום חזה', 'צל לב בגודל תקין וריאות שקופות.'],
+          ['xray_edema', 'צילום חזה: לב מוגדל ובצקת ריאות', 'צילום חזה', 'לב מוגדל ועכירות סביב הטבור של הריאות: נוזל בריאות, כמו באי-ספיקת לב שמאלית.'],
+          ['angio_normal', 'צנתור לב: עורקים כליליים פתוחים', 'צנתור לב (אנגיוגרפיה)', 'חומר הניגוד ממלא את העורקים בצורה חלקה: אין היצרות.'],
+          ['angio_stenosis', 'צנתור לב: היצרות בעורק כלילי', 'צנתור לב (אנגיוגרפיה)', 'בנקודה אחת חומר הניגוד עובר בקושי: היצרות שמסמנת טרשת. אפשר לטפל בבלון וסטנט.'],
+        ];
+        const items = RES.map(r => { const opts = [r[1], ...shuffle(RES.filter(x => x !== r).map(x => x[1])).slice(0, 3)]; return Q('איזו בדיקה זו, ומה התוצאה שבה?', 'procedures', shuffle(opts).map(o => o === r[1] ? OK(o, r[3]) : NO(o, `לא מתאים לתמונה. כאן: ${r[1]}. ${r[3]}`)), { vis: fig(r[0], r[2]) }); });
+        const SIMPLE = [
+          ['stress_test', 'מבחן מאמץ (ארגומטריה)', ['הולטר', 'אקו לב', 'צנתור לב'], 'המטופל הולך על הליכון, והא.ק.ג ולחץ הדם נבדקים כשהלב עובד קשה: כך מגלים איסכמיה שלא מופיעה במנוחה.'],
+          ['holter', 'הולטר (א.ק.ג ממושך)', ['מבחן מאמץ', 'אקו לב', 'צנתור לב'], 'מכשיר קטן שמקליט את הא.ק.ג לאורך יממה בחיי היומיום, ומתאים לתפיסת הפרעות קצב שמגיעות ועוברות.'],
+          ['stent', 'סטנט (תומכן) בתוך עורק כלילי', ['מסתם מלאכותי', 'קוצב לב', 'מעקף'], 'רשת מתכת שנשארת בעורק אחרי הרחבה בבלון ושומרת עליו פתוח.'],
+          ['cabg', 'ניתוח מעקפים (CABG)', ['סטנט בעורק', 'השתלת לב', 'אנגיופלסטיה בבלון'], 'כלי דם מושתל מחבר את אבי העורקים אל העורק הכלילי אחרי החסימה, ויוצר נתיב עוקף.'],
+        ];
+        SIMPLE.forEach(s => items.push(Q('מה מוצג בתמונה?', 'procedures', shuffle([OK(s[1], s[3]), ...s[2].map(o => NO(o, `לא זה. בתמונה: ${s[1]}. ${s[3]}`))]), { vis: fig(s[0], s[1]) })));
+        runQuiz(box, { finish: p => done(p) }, shuffle(items));
+      } },
       { title: 'מה עושה כל פרוצדורה?', run: (box, done) => matchGame(box, { tag: 'procedures', leftTitle: 'פרוצדורה', rightTitle: 'מה עושה', pairs: [
         ['צנתור לב אבחוני', 'הכנסת צינורית דרך עורק עד הלב ועריכת הדמיה של כלי הדם בעזרת חומר ניגוד'],
         ['אנגיופלסטיה', 'ניפוח של בלון זעיר בתוך עורק מוצר כדי להרחיב אותו'],
@@ -125,27 +180,213 @@ registerGame({
   },
 });
 
+/* ---------- אנימציה: מה קורה בלב בקצב תקין, בפרפור פרוזדורים ובפרפור חדרים ---------- */
+function arrHeartSim(box, done) {
+  const host = el('<div class="card"></div>'); box.appendChild(host);
+  const TXT = {
+    sinus: ['קצב סינוס תקין', 'האות יוצא מצומת SA, העליות מתכווצות, ואחריהן החדרים, בתיאום. בכל פעימה יוצא דם אל הגוף.'],
+    af: ['פרפור פרוזדורים', 'העליות רועדות במקום להתכווץ, והחדרים מקבלים אותות לא סדירים ולכן פועמים בקצב לא סדיר. הדם בעליות כמעט עומד ויכולים להיווצר בו קרישים. החדרים עדיין שואבים דם, ולכן המטופל לרוב בהכרה.'],
+    vf: ['פרפור חדרים', 'החדרים רועדים בלי התכווצות מתואמת, ולכן לא יוצא דם מהלב. זה דום לב: בלי החייאה והלם חשמלי (דפיברילטור) המטופל מאבד הכרה ומת.'],
+  };
+  let mode = 'sinus', raf = 0, t0 = performance.now(), nextBeat = 0, beatAt = -9, flash = 0, count = 0;
+  const shape = (id, cx, cy, rx, ry, fill) => `<ellipse id="${id}" cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${fill}" stroke="#7a2a33" stroke-width="3" data-c="${cx} ${cy}"/>`;
+  host.innerHTML = `<p class="instr">בחרו מצב והסתכלו איך הלב מתנהג. אפשר להחליף בכל רגע.</p>
+    <svg viewBox="0 0 300 250" class="co-svg" role="img" aria-label="אנימציה של לב בקצב תקין, בפרפור פרוזדורים ובפרפור חדרים">
+      <path d="M150,20 V52" stroke="#d83a4a" stroke-width="14" stroke-linecap="round"/>
+      ${shape('hra', 108, 92, 44, 38, '#9fb8ec')}${shape('hla', 192, 92, 44, 38, '#f1a2a9')}${shape('hrv', 112, 172, 46, 54, '#4a7bd0')}${shape('hlv', 190, 172, 50, 58, '#d83a4a')}
+      <g font-size="11" fill="#3a2a2e" text-anchor="middle" opacity=".75"><text x="108" y="122">עלייה ימנית</text><text x="192" y="122">עלייה שמאלית</text><text x="112" y="206">חדר ימני</text><text x="190" y="208">חדר שמאלי</text></g><circle id="hsa" cx="84" cy="70" r="7" fill="#f0ab2e" stroke="#fff" stroke-width="2"/>
+      <g id="hsp" fill="#f0ab2e" opacity="0"></g>
+      <circle id="hout" cx="150" cy="14" r="9" fill="#cfd3dc" stroke="#fff" stroke-width="2"/>
+      <text id="hcnt" x="265" y="16" font-size="12" fill="#7a5a50" text-anchor="middle"></text>
+    </svg>
+    <div class="row" style="flex-wrap:wrap;gap:6px;margin:6px 0">${Object.keys(TXT).map(k => `<button class="btn ${k === mode ? 'primary' : ''}" data-m="${k}">${TXT[k][0]}</button>`).join('')}</div>
+    <div class="card flat" id="hecg" style="padding:6px"></div>
+    <div class="explain good" id="htx"></div>
+    <button class="btn primary block" id="hgo" style="margin-top:10px">המשך ←</button>`;
+  const q = id => $(id, host), g = id => q('#' + id);
+  const sc = (e, s) => { const [cx, cy] = e.dataset.c.split(' '); e.setAttribute('transform', `translate(${cx} ${cy}) scale(${s}) translate(-${cx} -${cy})`); };
+  const ecgFor = m => ecgTrace({ type: m, hr: m === 'sinus' ? 72 : m === 'af' ? 115 : 0, seed: 31 }, { sec: 4, h: 120, label: TXT[m][0] });
+  function setMode(m) {
+    mode = m; count = 0; flash = 0; nextBeat = 0; t0 = performance.now();
+    $$('[data-m]', host).forEach(b => b.classList.toggle('primary', b.dataset.m === m));
+    q('#htx').innerHTML = `<b>${TXT[m][0]}:</b> ${TXT[m][1]}`; q('#hecg').innerHTML = ecgFor(m);
+    g('hout').setAttribute('fill', '#cfd3dc');
+  }
+  function frame(now) {
+    if (!host.isConnected) return;
+    const t = (now - t0) / 1000;
+    let ra = 1, ven = 1, spark = 0;
+    if (mode === 'sinus') {
+      const per = .857, ph = (t % per) / per;
+      if (ph < .2) ra = 1 - .1 * Math.sin(Math.PI * ph / .2);
+      if (ph > .32 && ph < .62) { ven = 1 - .13 * Math.sin(Math.PI * (ph - .32) / .3); if (now - beatAt > 500 && ph > .42) { beatAt = now; flash = 1; count++; } }
+      g('hsa').setAttribute('r', ph < .08 ? 10 : 7);
+    } else if (mode === 'af') {
+      ra = 1 + .028 * Math.sin(t * 47) + .02 * Math.sin(t * 31 + 1); spark = 1; g('hsa').setAttribute('r', 6);
+      if (t >= nextBeat) { beatAt = now; nextBeat = t + .33 + Math.random() * .6; flash = .75; count++; }
+      const dt = (now - beatAt) / 1000; if (dt < .3) ven = 1 - .12 * Math.sin(Math.PI * dt / .3);
+    } else {
+      ven = 1 + .07 * Math.sin(t * 38) * Math.sin(t * 13 + .7) + .025 * Math.sin(t * 61); ra = 1 + .02 * Math.sin(t * 22); spark = 2; g('hsa').setAttribute('r', 6);
+    }
+    sc(g('hra'), ra); sc(g('hla'), ra); sc(g('hrv'), ven); sc(g('hlv'), ven);
+    const sp = g('hsp'); sp.setAttribute('opacity', spark ? .95 : 0);
+    if (spark) { let s = ''; const cx = spark === 1 ? 150 : 150, cy = spark === 1 ? 92 : 175; for (let k = 0; k < 7; k++) s += `<circle cx="${(cx - 70 + Math.random() * 140).toFixed(0)}" cy="${(cy - 28 + Math.random() * 56).toFixed(0)}" r="3"/>`; sp.innerHTML = s; }
+    flash = Math.max(0, flash - .04); const out = g('hout'); out.setAttribute('fill', flash > .05 ? '#d83a4a' : '#cfd3dc'); out.setAttribute('r', (9 + flash * 6).toFixed(1));
+    g('hcnt').textContent = mode === 'vf' ? 'אין דם שיוצא' : '';
+    raf = requestAnimationFrame(frame);
+  }
+  $$('[data-m]', host).forEach(b => b.onclick = () => setMode(b.dataset.m));
+  q('#hgo').onclick = () => { cancelAnimationFrame(raf); done(100); };
+  setMode('sinus'); raf = requestAnimationFrame(frame);
+}
+
+/* ---------- מסע הקריש: לאן נסחף קריש מהעלייה השמאלית ומהעלייה הימנית ---------- */
+function clotJourney(box, done) {
+  const host = el('<div class="card"></div>'); box.appendChild(host);
+  const PATHS = {
+    L: { pts: [[172, 150], [172, 200], [170, 130], [150, 90], [150, 62]], txt: 'הקריש עבר מהעלייה השמאלית אל החדר השמאלי, יצא באבי העורקים והגיע אל כלי הדם של המוח. הוא חסם עורק במוח: <b>אירוע מוחי איסכמי</b>.' },
+    R: { pts: [[128, 150], [130, 200], [118, 135], [90, 140], [72, 150]], txt: 'הקריש עבר מהעלייה הימנית אל החדר הימני, ויצא בעורק הריאה אל הריאות. הוא חסם כלי דם בריאה: <b>תסחיף ריאתי</b> (כך בספר).' },
+  };
+  host.innerHTML = `<p class="instr">בפרפור פרוזדורים נוצרים קרישים בעליות. בחרו באיזו עלייה הוא נוצר, ועקבו אחרי הדרך שלו.</p>
+    <svg viewBox="0 0 300 260" class="co-svg" role="img" aria-label="מסלול קריש דם מהלב למוח או לריאות">
+      <circle cx="150" cy="38" r="30" fill="#f3d8c8" stroke="#b86a63" stroke-width="3"/><text x="150" y="42" text-anchor="middle" font-size="13" fill="#7a5a50">מוח</text>
+      <ellipse cx="62" cy="150" rx="32" ry="48" fill="#cfe3f5" stroke="#6a93b8" stroke-width="3"/><text x="62" y="154" text-anchor="middle" font-size="13" fill="#3d6486">ריאה</text>
+      <ellipse cx="238" cy="150" rx="32" ry="48" fill="#cfe3f5" stroke="#6a93b8" stroke-width="3"/><text x="238" y="154" text-anchor="middle" font-size="13" fill="#3d6486">ריאה</text>
+      <path d="M170,130 Q155,95 150,66" stroke="#d83a4a" stroke-width="10" fill="none" stroke-linecap="round" opacity=".55"/>
+      <path d="M120,135 Q95,135 72,148" stroke="#4a7bd0" stroke-width="10" fill="none" stroke-linecap="round" opacity=".55"/>
+      <ellipse cx="128" cy="150" rx="32" ry="26" fill="#9fb8ec" stroke="#7a2a33" stroke-width="3"/><text x="128" y="154" text-anchor="middle" font-size="11" fill="#fff">ימנית</text>
+      <ellipse cx="172" cy="150" rx="32" ry="26" fill="#f1a2a9" stroke="#7a2a33" stroke-width="3"/><text x="172" y="154" text-anchor="middle" font-size="11" fill="#7a2a33">שמאלית</text>
+      <ellipse cx="128" cy="205" rx="34" ry="34" fill="#4a7bd0" stroke="#7a2a33" stroke-width="3" opacity=".9"/><ellipse cx="172" cy="205" rx="36" ry="36" fill="#d83a4a" stroke="#7a2a33" stroke-width="3" opacity=".9"/>
+      <circle id="clot" cx="-20" cy="-20" r="9" fill="#7a0f24" stroke="#fff" stroke-width="2.5"/></svg>
+    <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" data-p="L">קריש נוצר בעלייה השמאלית</button><button class="btn" data-p="R">קריש נוצר בעלייה הימנית</button></div>
+    <div class="explain" id="ctx" style="margin-top:8px">בחרו עלייה.</div><div class="small muted" id="cseen"></div>
+    <button class="btn primary block" id="cgo" style="margin-top:10px" disabled>המשך ←</button>`;
+  const seen = new Set(), clot = $('#clot', host); let raf = 0, busy = false;
+  host._bot = () => { if (busy) return false; const k = ['L', 'R'].find(x => !seen.has(x)); if (!k) return false; $(`[data-p="${k}"]`, host).click(); return true; };
+  function run(k) {
+    busy = true; cancelAnimationFrame(raf); const pts = PATHS[k].pts, st = performance.now(), dur = animMs(3200);
+    if (window.__fast) { busy = false; $('#ctx', host).innerHTML = PATHS[k].txt; seen.add(k); $('#cseen', host).textContent = 'ראיתם ' + seen.size + ' מתוך 2 מסלולים.'; if (seen.size === 2) $('#cgo', host).disabled = false; return; } $('#ctx', host).innerHTML = 'הקריש בדרך...';
+    const seg = pts.slice(1).map((p, i) => Math.hypot(p[0] - pts[i][0], p[1] - pts[i][1])), tot = seg.reduce((a, b) => a + b, 0);
+    const f = now => {
+      const p = Math.min(1, (now - st) / dur); let d = p * tot, i = 0; while (i < seg.length - 1 && d > seg[i]) { d -= seg[i]; i++; }
+      const a = pts[i], b = pts[i + 1], u = seg[i] ? Math.min(1, d / seg[i]) : 1; clot.setAttribute('cx', a[0] + (b[0] - a[0]) * u); clot.setAttribute('cy', a[1] + (b[1] - a[1]) * u);
+      if (p < 1 && host.isConnected) raf = requestAnimationFrame(f); else { busy = false; $('#ctx', host).innerHTML = PATHS[k].txt; seen.add(k); $('#cseen', host).textContent = `ראיתם ${seen.size} מתוך 2 מסלולים.`; if (seen.size === 2) $('#cgo', host).disabled = false; }
+    };
+    raf = requestAnimationFrame(f);
+  }
+  $$('[data-p]', host).forEach(b => b.onclick = () => run(b.dataset.p));
+  $('#cgo', host).onclick = () => done(100);
+}
+
+/* ---------- מקרה בחדר מיון: כל החלטה מובילה לתוצאה ---------- */
+function erCase(box, C, done) {
+  let i = 0, wrong = 0;
+  const host = el('<div class="card"></div>'); box.appendChild(host);
+  host._bot = () => { const k = C.steps[i].opts.findIndex(o => o.ok), b = $(`[data-k="${k}"]:not([disabled])`, host); if (!b) return false; b.click(); return true; };
+  function step() {
+    const s = C.steps[i];
+    host.innerHTML = `<h3 style="margin:0 0 6px">${C.title}</h3><div class="small muted" style="margin-bottom:6px">שלב ${i + 1} מתוך ${C.steps.length}</div>${i === 0 ? `<p>${C.intro}</p>` : ''}${s.story ? `<p>${s.story}</p>` : ''}${s.vis ? s.vis() : ''}<p><b>${s.ask}</b></p>
+      <div class="col">${shuffle(s.opts.map((o, k) => [o, k])).map(([o, k]) => `<button class="btn block" data-k="${k}">${o.t}</button>`).join('')}</div><div id="erfb" style="margin-top:8px"></div>`;
+    $$('[data-k]', host).forEach(b => b.onclick = () => {
+      const o = s.opts[+b.dataset.k], fb = $('#erfb', host);
+      if (o.ok) {
+        Snd.play('ok'); $$('[data-k]', host).forEach(x => x.disabled = true); b.classList.add('primary');
+        const last = i === C.steps.length - 1;
+        fb.innerHTML = `<div class="explain good">✅ ${o.fb}</div>${last ? `<div class="explain" style="margin-top:8px"><b>סיכום המקרה:</b> ${C.end}</div>` : ''}<button class="btn primary block" id="ernx" style="margin-top:8px">${last ? 'המשך ←' : 'הצעד הבא ←'}</button>`;
+        $('#ernx', host).onclick = () => { if (last) done(Math.max(40, 100 - wrong * 15)); else { i++; step(); } };
+      } else {
+        wrong++; Store.mistake('arrhythmia'); Snd.play('no'); b.disabled = true;
+        fb.innerHTML = `<div class="explain bad">⚠️ <b>מה קרה בעקבות ההחלטה:</b> ${o.fb}<div class="small" style="margin-top:4px">בחרו החלטה אחרת.</div></div>`;
+      }
+    });
+  }
+  step();
+}
+const ER_A = {
+  title: '🚑 חדר מיון: שושנה, בת 68', intro: 'שושנה הגיעה עם בתה. היא מתארת דפיקות לב חזקות ובלתי סדירות מאז הבוקר, חולשה וסחרחורת קלה. היא בהכרה, מדברת בבהירות, לחץ הדם שלה 130/80.',
+  end: 'אובחן פרפור פרוזדורים. שושנה קיבלה תרופה להאטת הקצב, ובמקביל נוגד קרישה כדי למנוע קרישים ואירוע מוחי, וקבעו לה מעקב. ההחלטה הנכונה לא הייתה רק לזהות את ההפרעה, אלא גם להגן עליה מהסכנה שבטווח הארוך.',
+  steps: [
+    { ask: 'מה הבדיקה המהירה והחשובה ביותר כרגע?', opts: [
+      { t: 'א.ק.ג', ok: 1, fb: 'א.ק.ג מראה מיד אם יש הפרעת קצב ואיזו.' },
+      { t: 'CT מוח', fb: 'אין סימנים נוירולוגיים. עברה שעה, והחשד להפרעת קצב עדיין לא נבדק.' },
+      { t: 'צילום רנטגן של הבטן', fb: 'הבדיקה לא עונה על השאלה מה קורה בקצב הלב, והזמן נוקף.' },
+      { t: 'בדיקת שתן', fb: 'לא תסביר דפיקות לב לא סדירות, והחולה ממתינה בלי אבחנה.' },
+    ] },
+    { story: 'מחברים אותה לא.ק.ג. זו הרצועה:', vis: () => `<div class="card flat" style="padding:6px">${ecgTrace({ type: 'af', hr: 110, seed: 8 }, { sec: 4, label: 'רצועת א.ק.ג של שושנה' })}</div>`, ask: 'איזו הפרעה רואים ברצועה?', opts: [
+      { t: 'פרפור פרוזדורים', ok: 1, fb: 'המרווחים בין הפעימות לא סדירים ואין גלי P ברורים: פרפור פרוזדורים.' },
+      { t: 'פרפור חדרים', fb: 'שושנה בהכרה ומדברת, ובפרפור חדרים אין דופק. כאן יש קומפלקסים לא סדירים.' },
+      { t: 'קצב סינוס תקין', fb: 'בקצב סינוס המרווחים שווים ויש גל P לפני כל QRS. כאן לא.' },
+      { t: 'הרמת ST', fb: 'אין כאן הרמת ST. הממצא הבולט הוא אי-סדירות.' },
+    ] },
+    { ask: 'מהי הסכנה העיקרית של המצב הזה לטווח הארוך?', opts: [
+      { t: 'קריש דם בעליות שעלול להיסחף למוח ולגרום לאירוע מוחי', ok: 1, fb: 'הדם בעליות לא זורם היטב ונוצרים קרישים. קריש מהעלייה השמאלית מגיע למוח.' },
+      { t: 'דום לב מיידי בעוד דקות', fb: 'זו הסכנה של פרפור חדרים, לא של פרפור פרוזדורים.' },
+      { t: 'אי-ספיקת כליות מיידית', fb: 'לא זו הסכנה העיקרית של ההפרעה.' },
+      { t: 'אין סכנה, הכול בסדר', fb: 'שחררו אותה הביתה בלי הסבר. אחרי שבוע חזרה עם חולשה בצד ימין ופה צונח: אירוע מוחי איסכמי.' },
+    ] },
+    { ask: 'מה הטיפול המתאים אחרי האבחון?', opts: [
+      { t: 'תרופה להאטת הקצב, ונוגד קרישה להגנה מקרישים', ok: 1, fb: 'האטת הקצב מקלה על התסמינים, ונוגד הקרישה מונע אירוע מוחי.' },
+      { t: 'הלם חשמלי מיידי בדפיברילטור, כמו בדום לב', fb: 'שושנה בהכרה ועם דופק, והלם כזה אינו הטיפול הראשוני (הוא שמור לפרפור חדרים או למקרים מסוימים).' },
+      { t: 'שחרור הביתה, בלי טיפול ובלי מעקב', fb: 'בלי נוגד קרישה הסיכון לשבץ נשאר. אחרי כמה ימים חזרה עם חולשה בצד ימין ופה צונח.' },
+      { t: 'מתן סטטין בלבד', fb: 'סטטין מוריד כולסטרול, ולא מטפל בקצב או בסכנת הקרישים.' },
+    ] },
+  ],
+};
+const ER_B = {
+  title: '🚑 קניון: אדם בן 55 קורס לפתע', intro: 'אתם במקום. גבר בן 55 קורס באמצע הקניון ונופל על הרצפה. אנשים מתקבצים סביבו.',
+  end: 'הגבר היה בפרפור חדרים. כל דקה שעוברת בלי הלם חשמלי מורידה את סיכויי ההישרדות, ולכן ההחייאה המיידית והדפיברילטור הצילו אותו.',
+  steps: [
+    { ask: 'מה עושים קודם כול?', opts: [
+      { t: 'בודקים הכרה ונשימה, וקוראים לעזרה רפואית', ok: 1, fb: 'הוא לא מגיב ולא נושם: קוראים למד"א ומתחילים החייאה.' },
+      { t: 'מושיבים אותו ונותנים לו מים', fb: 'אדם ללא הכרה לא יכול לשתות. עברו דקות יקרות, והלב עדיין לא פועל.' },
+      { t: 'ממתינים שיתעורר בעצמו', fb: 'עברו חמש דקות בלי החייאה. בכל דקה כזו יורדים סיכויי ההישרדות משמעותית.' },
+      { t: 'נותנים אספירין לבליעה', fb: 'אדם בלי הכרה לא יכול לבלוע. וגם זו אינה פעולה ראשונה בדום לב.' },
+    ] },
+    { story: 'אין הכרה ואין נשימה. מתחילים עיסויי חזה. מישהו מביא דפיברילטור אוטומטי, מחברים אותו, והוא מציג את הרצועה:', vis: () => `<div class="card flat" style="padding:6px">${ecgTrace({ type: 'vf', hr: 0, seed: 14 }, { sec: 4, label: 'רצועת א.ק.ג של הגבר בקניון' })}</div>`, ask: 'מה רואים ברצועה?', opts: [
+      { t: 'פרפור חדרים', ok: 1, fb: 'תנודות כאוטיות בלי קומפלקסים: החדרים לא שואבים דם.' },
+      { t: 'קצב סינוס תקין', fb: 'בקצב סינוס יש QRS סדירים. כאן אין, ולכן אי אפשר להמשיך כאילו הכול בסדר.' },
+      { t: 'פרפור פרוזדורים', fb: 'בפרפור פרוזדורים יש עדיין קומפלקסים (לא סדירים). כאן אין קומפלקסים כלל.' },
+      { t: 'ברדיקרדיה', fb: 'ברדיקרדיה היא קצב איטי עם קומפלקסים. כאן אין קומפלקסים.' },
+    ] },
+    { ask: 'מה הטיפול הדחוף ביותר?', opts: [
+      { t: 'הלם חשמלי בדפיברילטור, והמשך החייאה', ok: 1, fb: 'הלם חשמלי מאפס את הפעילות הכאוטית וקוצב הלב יכול להתחיל מחדש.' },
+      { t: 'עירוי של נוגד קרישה', fb: 'אין לכך תועלת בדום לב, ולא הלם חשמלי ולא החייאה: הזמן אוזל.' },
+      { t: 'מבחן מאמץ בבית החולים', fb: 'זו בדיקה לשלב אחר, ובינתיים אין דם שזורם למוח.' },
+      { t: 'הולטר ומעקב בבית', fb: 'מדובר בדום לב, מצב חירום. הולטר לא יציל חיים עכשיו.' },
+    ] },
+  ],
+};
+
 /* ---------- פרפור פרוזדורים ופרפור חדרים ---------- */
 registerGame({
-  id: 'a_arr', part: 'A', sec: 'disease', icon: '🌀', title: 'פרפור פרוזדורים ופרפור חדרים', desc: 'שתי הפרעות קצב: איך נראות בא.ק.ג, ומה הסכנה שבכל אחת',
+  id: 'a_arr', part: 'A', sec: 'disease', icon: '🌀', title: 'פרפור פרוזדורים ופרפור חדרים', desc: 'שתי הפרעות קצב: מה קורה בלב, מה הסכנה שבכל אחת, ואיך מטפלים במטופלים בחדר מיון',
   learned: [
     'פרפור פרוזדורים (AF): פעילות חשמלית מהירה ולא סדירה בעליות. בא.ק.ג אין גלי P, והדופק לא סדיר. הסכנה: קרישי דם בעליות. קריש מהעלייה השמאלית נסחף למוח (אירוע מוחי), ומהימנית לריאות.',
     'פרפור חדרים (VF): פעילות חשמלית כאוטית בחדרים, והלב לא מזרים דם. בלי החייאה והלם חשמלי (דפיברילטור) הוא מוביל כמעט תמיד למוות.',
     'ב-AF מטפלים בנוגדי קרישה, תרופות להאטת הקצב, ולעיתים בשוק חשמלי או באבלציה.'
   ],
-  teacherNote: 'סעיף 4.1 בתוכנית וספר הקליניקה (סיבוכי אוטם: פרפור פרוזדורים ופרפור חדרים). שלבים: זיהוי רצועות (סינוס, AF, VF), מיון מאפיינים, שאלות. הרצועות נוצרות בקוד. הערה: בספר ובתוכנית קריש מהעלייה הימנית נסחף לריאות. בפועל קרישים בפרפור פרוזדורים נוצרים בעיקר באוזנית העלייה השמאלית, ותסחיף ריאתי נגרם בדרך כלל מקריש בוורידי הרגליים.',
+  teacherNote: 'סעיף 4.1 בתוכנית וספר הקליניקה (סיבוכי אוטם: פרפור פרוזדורים ופרפור חדרים). שלבים: אנימציה של הלב בשלושה מצבים, מיון משותף של מאפייני שתי ההפרעות, מסע הקריש, שני מקרים בחדר מיון (כל בחירה שגויה מציגה תוצאה), שאלות. זיהוי הרצועות עצמן נמצא בתחנת הא.ק.ג בסוף חלק המחלות. הרצועות והאנימציות נוצרות בקוד. הערה: בספר ובתוכנית קריש מהעלייה הימנית נסחף לריאות. בפועל קרישים בפרפור פרוזדורים נוצרים בעיקר באוזנית העלייה השמאלית, ותסחיף ריאתי נגרם בדרך כלל מקריש בוורידי הרגליים.',
   mount(root, ctx) {
-    root.insertAdjacentHTML('afterbegin', say('אחת הפרעות הקצב מציקה ומסוכנת בטווח הארוך, והשנייה מסכנת חיים בתוך דקות. בואו נבדיל.', 'think'));
+    root.insertAdjacentHTML('afterbegin', say('אחת הפרעות הקצב מציקה ומסוכנת בטווח הארוך, והשנייה מסכנת חיים בתוך דקות. נראה מה קורה בלב, ואחר כך תטפלו במטופלים.', 'think'));
     runStages(root, ctx, [
-      { title: 'מזהים רצועות', run: (box, done) => runQuiz(box, { finish: p => done(p) }, ecgItems(shuffle(['sinus', 'af', 'vf', 'af', 'vf']), 'arrhythmia', ['sinus', 'af', 'vf'], 21)) },
+      { title: 'מה קורה בלב?', run: arrHeartSim },
       { title: 'איזו הפרעה?', run: (box, done) => binGame(box, { tag: 'arrhythmia', buckets: ['פרפור פרוזדורים', 'פרפור חדרים'], title: 'בחרו מאפיין ואז לחצו על ההפרעה שמתאימה לו.', items: [
         { t: 'מתרחש בעליות', b: 0, why: 'בפרפור פרוזדורים תאי העליות מייצרים פעילות מהירה ולא סדירה.' },
         { t: 'מתרחש בחדרים', b: 1, why: 'בפרפור חדרים נוצרים גירויים מהירים ובלתי מסונכרנים בחדרים.' },
+        { t: 'בא.ק.ג אין גלי P, והמרווחים בין הפעימות לא סדירים', b: 0, why: 'העליות רועדות במקום להפעיל את החדרים בתיאום, ולכן אין גל P ברור והקצב לא סדיר.' },
+        { t: 'בא.ק.ג רק תנודות כאוטיות, בלי קומפלקסים', b: 1, why: 'החדרים רועדים בלי התכווצות מתואמת, ולכן אין קומפלקסי QRS מסודרים.' },
         { t: 'סכנה עיקרית: קרישי דם ואירוע מוחי', b: 0, why: 'הדם בעליות לא זורם היטב, ונוצרים קרישים שעלולים להיסחף למוח.' },
         { t: 'דום לב: דורש החייאה ודפיברילטור מיידית', b: 1, why: 'החדרים לא שואבים דם, ובלי טיפול מיידי כמעט תמיד מתים.' },
         { t: 'דופק לא סדיר ולעיתים הלמות לב, אבל בהכרה', b: 0, why: 'המטופלים לרוב ערים ומרגישים הלמות.' },
         { t: 'מטופל מאבד הכרה ואין דופק', b: 1, why: 'אין תפוקת לב יעילה, ולכן אין דופק ומאבדים הכרה.' },
+        { t: 'טיפול מונע לטווח ארוך: נוגדי קרישה', b: 0, why: 'כדי למנוע קרישים ואירוע מוחי.' },
+        { t: 'טיפול דחוף: הלם חשמלי בדפיברילטור', b: 1, why: 'ההלם מאפס את הפעילות הכאוטית ומאפשר לקוצב להתחיל מחדש.' },
+        { t: 'אפשר לחיות איתו שנים בטיפול ובמעקב', b: 0, why: 'המטופלים מנהלים חיים רגילים, עם תרופות ומעקב.' },
+        { t: 'מסכן חיים תוך דקות בלי טיפול', b: 1, why: 'בלי זרימת דם המוח נפגע תוך דקות ספורות.' },
       ], onDone: done }) },
+      { title: 'מסע הקריש', run: clotJourney },
+      { title: 'מקרה 1: חדר מיון', run: (box, done) => erCase(box, ER_A, done) },
+      { title: 'מקרה 2: בקניון', run: (box, done) => erCase(box, ER_B, done) },
       { title: 'שאלות', run: runQuizStage([
         Q('לאן עלול להיסחף קריש שנוצר בעלייה השמאלית בפרפור פרוזדורים?', 'arrhythmia', [OK('למוח, ולגרום לאירוע מוחי איסכמי', 'מהעלייה השמאלית הדם יוצא אל הגוף, כולל כלי הדם של המוח.'), NO('לריאות, ולגרום לבצקת ריאות', 'קריש מהעלייה הימנית נסחף לריאות. העלייה השמאלית מובילה אל הגוף.'), NO('לכליה בלבד, ולגרום להפסקת שתן', 'הקריש יכול להגיע לאיברים שונים, והסכנה הבולטת היא למוח.'), NO('לווריד חלול, ולהיעלם', 'הקריש מוזרם בעורקים, ולא בוורידים חלולים.')]),
         Q('מדוע מטופלים בפרפור פרוזדורים כרוני מקבלים נוגדי קרישה?', 'arrhythmia', [OK('כדי למנוע קרישים שיגיעו לכלי דם במוח', 'כך מורידים את הסיכון לאירוע מוחי.'), NO('כדי לעצור את הפרפור ולהחזיר קצב סינוס', 'נוגדי קרישה לא משנים את הקצב.'), NO('כדי להוריד את לחץ הדם ללחץ תקין', 'לחץ דם מטופל בתרופות אחרות.'), NO('כדי להגדיל את תפוקת הלב בכל פעימה', 'הם לא משפרים את הכיווץ.')]),
@@ -156,19 +397,83 @@ registerGame({
   },
 });
 
+/* ---------- אי-ספיקת לב: אנימציה "לאן הדם נתקע?" ---------- */
+function hfSim(box, done) {
+  const host = el('<div class="card"></div>'); box.appendChild(host);
+  const S = {
+    ok: ['הלב תקין', 'שני הצדדים שואבים. הדם זורם בלי להיתקע: הריאות נקיות, הוורידים רגועים והקרסוליים רגילים.', []],
+    L: ['החדר השמאלי נכשל', 'החדר השמאלי לא מפנה את הדם שמגיע מהריאות, והדם נתקע אחריו: <b>הצטברות נוזלים בריאות</b>.', ['קוצר נשימה וחרחורים', 'התעוררות בלילה עם קוצר נשימה', 'במקרה חריף: בצקת ריאות ושיעול קצף ורוד', 'עייפות ובלבול (פחות דם עשיר בחמצן לגוף)']],
+    R: ['החדר הימני נכשל', 'החדר הימני לא מפנה את הדם שחוזר מהגוף, והדם נתקע אחריו: <b>הצטברות בגוף</b>.', ['ורידי צוואר בולטים', 'כבד מוגדל ובטן נפוחה', 'בצקות ברגליים ובקרסוליים']],
+  };
+  let st = 'ok';
+  host.innerHTML = `<p class="instr">בחרו איזה צד של הלב נכשל וראו איפה הדם "עומד בתור".</p>
+    <svg viewBox="0 0 300 300" class="co-svg" role="img" aria-label="גוף ולב: איפה מצטבר הדם בכשל של החדר השמאלי או הימני">
+      <circle cx="150" cy="30" r="22" fill="#f3d8c8" stroke="#b86a63" stroke-width="2.5"/>
+      <rect x="100" y="66" width="100" height="136" rx="22" fill="#f8e4da" stroke="#b86a63" stroke-width="2.5"/>
+      <rect x="118" y="200" width="26" height="76" rx="8" fill="#f8e4da" stroke="#b86a63" stroke-width="2.5"/><rect x="156" y="200" width="26" height="76" rx="8" fill="#f8e4da" stroke="#b86a63" stroke-width="2.5"/>
+      <ellipse cx="119" cy="112" rx="21" ry="34" fill="#cfe3f5" stroke="#6a93b8" stroke-width="2.5"/><ellipse cx="181" cy="112" rx="21" ry="34" fill="#cfe3f5" stroke="#6a93b8" stroke-width="2.5"/>
+      <g class="hf-fx" id="hf-lungs"><ellipse cx="119" cy="122" rx="19" ry="24" fill="#4a90d9" opacity=".7"/><ellipse cx="181" cy="122" rx="19" ry="24" fill="#4a90d9" opacity=".7"/><circle cx="112" cy="100" r="3" fill="#fff"/><circle cx="125" cy="128" r="3" fill="#fff"/><circle cx="176" cy="108" r="3" fill="#fff"/><circle cx="188" cy="132" r="3" fill="#fff"/></g>
+      <g id="hf-hearts"><circle id="hf-r" cx="143" cy="150" r="14" fill="#4a7bd0" stroke="#7a2a33" stroke-width="2.5"/><circle id="hf-l" cx="162" cy="150" r="16" fill="#d83a4a" stroke="#7a2a33" stroke-width="2.5"/><text id="hf-x" x="150" y="126" text-anchor="middle" font-size="18" fill="#c0334d" opacity="0">✖</text></g>
+      <g class="hf-fx" id="hf-neck"><rect x="132" y="50" width="12" height="20" rx="6" fill="#3f6fc6"/><rect x="156" y="50" width="12" height="20" rx="6" fill="#3f6fc6"/></g>
+      <g class="hf-fx" id="hf-liver"><ellipse cx="128" cy="184" rx="26" ry="14" fill="#8a4a6a" opacity=".8"/></g>
+      <g class="hf-fx" id="hf-ankles"><ellipse cx="131" cy="272" rx="20" ry="12" fill="#e5a9c0" stroke="#b86a63" stroke-width="2"/><ellipse cx="169" cy="272" rx="20" ry="12" fill="#e5a9c0" stroke="#b86a63" stroke-width="2"/></g>
+    </svg>
+    <div class="row" style="flex-wrap:wrap;gap:6px;margin:6px 0">${Object.keys(S).map(k => `<button class="btn ${k === st ? 'primary' : ''}" data-s="${k}">${S[k][0]}</button>`).join('')}</div>
+    <div class="explain good" id="hfx"></div>
+    <button class="btn primary block" id="hgo" style="margin-top:10px">המשך ←</button>`;
+  const q = id => $(id, host);
+  function show(k) {
+    st = k; $$('[data-s]', host).forEach(b => b.classList.toggle('primary', b.dataset.s === k));
+    q('#hf-lungs').classList.toggle('on', k === 'L'); ['neck', 'liver', 'ankles'].forEach(n => q('#hf-' + n).classList.toggle('on', k === 'R'));
+    q('#hf-l').setAttribute('fill', k === 'L' ? '#b9bcc6' : '#d83a4a'); q('#hf-r').setAttribute('fill', k === 'R' ? '#b9bcc6' : '#4a7bd0'); q('#hf-x').setAttribute('opacity', k === 'ok' ? 0 : 1); q('#hf-x').setAttribute('x', k === 'L' ? 162 : 143);
+    q('#hfx').innerHTML = `<b>${S[k][0]}:</b> ${S[k][1]}${S[k][2].length ? `<ul style="margin:6px 0 0;padding-inline-start:20px">${S[k][2].map(t => `<li>${t}</li>`).join('')}</ul>` : ''}`;
+  }
+  $$('[data-s]', host).forEach(b => b.onclick = () => show(b.dataset.s));
+  q('#hgo').onclick = () => done(100);
+  show('ok');
+}
+
+/* ---------- אי-ספיקת לב: איפה בגוף, ואיזה צד ---------- */
+function hfBody(box, done) {
+  const ZONES = [['🫁', 'ריאות'], ['🩸', 'ורידי הצוואר'], ['🍖', 'כבד ובטן'], ['🦶', 'קרסוליים ורגליים'], ['🧠', 'מוח']];
+  const ITEMS = shuffle([
+    ['קוצר נשימה וחרחורים בעת נשימה', 0, 0, 'הדם נתקע בריאות אחרי החדר השמאלי.'],
+    ['התעוררות בלילה עם קוצר נשימה, וצורך בכמה כריות', 0, 0, 'כשנשכבים הנוזל חוזר אל הריאות: סימן של כשל שמאלי.'],
+    ['שיעול עם ליחה ורודה ומקציפה', 0, 0, 'בצקת ריאות: נוזל בנאדיות, מצב חירום של כשל שמאלי.'],
+    ['ורידי צוואר בולטים', 1, 1, 'הדם נעצר לפני העלייה הימנית ומתגודד בוורידים.'],
+    ['כבד מוגדל ובטן נפוחה', 2, 1, 'הוורידים מהבטן מתגודדים כשהצד הימני נכשל.'],
+    ['נפיחות בקרסוליים שנשארת אחרי לחיצה', 3, 1, 'הדם נתקע בגוף ונוזל דולף אל הרקמות, ובמיוחד ברגליים.'],
+    ['בלבול ועייפות בגלל אספקת דם לא מספקת', 4, 0, 'הצד השמאלי מזרים דם עשיר בחמצן אל המוח, ובכשל שלו המוח מקבל פחות.'],
+  ]);
+  let i = 0, wrong = 0, zone = null; const host = el('<div class="card"></div>'); box.appendChild(host);
+  host._bot = () => { if ($('#hnx', host)) return false; const it = ITEMS[i], b = zone == null ? $(`[data-z="${it[1]}"]`, host) : $(`[data-sd="${it[2]}"]:not([disabled])`, host); if (!b) return false; b.click(); return true; };
+  function draw() {
+    const it = ITEMS[i];
+    host.innerHTML = `<p class="instr">סימן ${i + 1} מתוך ${ITEMS.length}: איפה בגוף הוא מופיע, ומה הצד הפגוע?</p><div class="card flat center" style="font-size:1.1rem;font-weight:800">${it[0]}</div>
+      ${zone == null ? `<p><b>איפה בגוף?</b></p><div class="row" style="flex-wrap:wrap;gap:8px">${ZONES.map((z, k) => `<button class="btn" data-z="${k}">${z[0]} ${z[1]}</button>`).join('')}</div>` : `<p><b>איזה צד של הלב נכשל?</b></p><div class="row" style="gap:8px"><button class="btn" data-sd="0">החדר השמאלי</button><button class="btn" data-sd="1">החדר הימני</button></div>`}<div id="hfb" style="margin-top:8px"></div>`;
+    $$('[data-z]', host).forEach(b => b.onclick = () => { if (+b.dataset.z === it[1]) { Snd.play('ok'); zone = it[1]; draw(); } else { wrong++; Store.mistake('hf'); Snd.play('no'); b.disabled = true; $('#hfb', host).innerHTML = '<div class="explain bad">לא בדיוק. חשבו איפה הדם עומד בתור, ונסו שוב.</div>'; } });
+    $$('[data-sd]', host).forEach(b => b.onclick = () => {
+      if (+b.dataset.sd === it[2]) { Snd.play('ok'); $$('[data-sd]', host).forEach(x => x.disabled = true); $('#hfb', host).innerHTML = `<div class="explain good">✅ ${it[3]}</div><button class="btn primary block" id="hnx" style="margin-top:8px">${i < ITEMS.length - 1 ? 'הבא ←' : 'סיום ←'}</button>`; $('#hnx', host).onclick = () => { if (i < ITEMS.length - 1) { i++; zone = null; draw(); } else done(Math.max(0, Math.round(100 * (ITEMS.length - wrong) / ITEMS.length))); }; }
+      else { wrong++; Store.mistake('hf'); Snd.play('no'); b.disabled = true; $('#hfb', host).innerHTML = '<div class="explain bad">לא הצד הנכון. זכרו: שמאל = ריאות ומוח, ימין = הגוף כולו.</div>'; }
+    });
+  }
+  draw();
+}
+
 /* ---------- אי-ספיקת לב ---------- */
 registerGame({
-  id: 'a_hf', part: 'A', sec: 'disease', icon: '🫁', title: 'אי-ספיקת לב: שמאלית וימנית', desc: 'איזה צד של הלב נכשל, ואיפה מצטבר הדם',
+  id: 'a_hf', part: 'A', sec: 'disease', icon: '🫁', title: 'אי-ספיקת לב: שמאלית וימנית', desc: 'איזה צד של הלב נכשל, איפה מצטבר הדם, איך נראים הממצאים ואיך מטפלים',
   learned: [
     'אי-ספיקת לב: הלב לא מזרים דם עשיר בחמצן בכמות הנדרשת לגוף. הסיבות העיקריות: אוטם (אי-ספיקה סיסטולית), ויתר לחץ דם ממושך (שריר מתעבה, אי-ספיקה דיאסטולית).',
     'אי-ספיקה שמאלית: הדם מצטבר בריאות (קוצר נשימה, חרחורים, ובמקרה חריף בצקת ריאות). אי-ספיקה ימנית: הדם מצטבר בגוף (בצקות ברגליים, גודש בוורידי הצוואר ובכבד).',
-    'הטיפול: להקטין את העומס על הלב ולהוציא נוזלים: משתנים, ניטרוגליצרין, חוסמי בטא, מעכבי ACE, וחמצן במצב חמור.'
+    'הטיפול: להקטין את העומס על הלב ולהוציא נוזלים: משתנים, ניטרוגליצרין, חוסמי בטא, מעכבי ACE, וחמצן במצב חמור. בקוצר נשימה מושיבים את המטופל בתנוחה מוגבהת.'
   ],
-  teacherNote: 'סעיף 4.2 בתוכנית וספר הקליניקה (פרק 3). שלבים: טבלת "נחשו לפני שחושפים" (שמאלית מול ימנית), שאלות. לפי הספר, בלבול נובע מאספקה לקויה של דם עשיר בחמצן למוח (אי-ספיקה שמאלית), וירידה בסיבולת למאמץ נוגעת לשני הצדדים, ולכן לא נכללה בטבלה.',
+  teacherNote: 'סעיף 4.2 בתוכנית וספר הקליניקה (פרק 3). שלבים: אנימציה "לאן הדם נתקע" (שמאל מול ימין), טבלת "נחשו לפני שחושפים", שיוך סימנים לגוף ולצד, ממצאי בדיקה (צילום חזה, אקו, בדיקה גופנית), מיון טיפולים לפי מטרתם, שאלות. לפי הספר, בלבול נובע מאספקה לקויה של דם עשיר בחמצן למוח (אי-ספיקה שמאלית), וירידה בסיבולת למאמץ נוגעת לשני הצדדים, ולכן לא נכללה בטבלה. הטיפולים הנזכרים הם אלה שבספר ובתוכנית. הערה: בפועל אי-ספיקה נובעת לרוב משילוב של שני הצדדים.',
   mount(root, ctx) {
     root.insertAdjacentHTML('afterbegin', say('כשחדר מפסיק לשאוב, הדם "עומד בתור" אחריו. השאלה: איפה התור?', 'think'));
-    root.insertAdjacentHTML('beforeend', artFigs([['xray_normal', 'צילום חזה תקין'], ['xray_edema', 'לב מוגדל ובצקת ריאות'], ['echo_normal', 'אקו לב תקין'], ['echo_dilated', 'אקו: חדר שמאלי מורחב']], 'כך נראים צילום חזה ואקו לב (לחצו להגדלה):'));
+    const fig = (k, alt) => ART[k] ? `<div class="card flat center" style="padding:6px"><img class="zoomable" src="${ART[k]}" alt="${alt}" style="max-width:300px;width:100%;border-radius:12px"></div>` : '';
     runStages(root, ctx, [
+      { title: 'לאן הדם נתקע?', run: hfSim },
       { title: 'איפה התור?', run: (box, done) => predictTable(box, { tag: 'hf', cols: ['אי-ספיקה שמאלית', 'אי-ספיקה ימנית'], rows: [
         { label: 'קוצר נשימה וחרחורים בריאות', why: 'חדר שמאל לא מפנה את הדם שמגיע מהריאות, ולכן הוא מצטבר בהן.', cells: [{ opts: ['כן', 'לא'], ok: 0 }, { opts: ['כן', 'לא'], ok: 1 }] },
         { label: 'בצקות ברגליים', why: 'חדר ימין לא מפנה את הדם שחוזר מהגוף, ולכן נוזלים מצטברים בגפיים.', cells: [{ opts: ['כן', 'לא'], ok: 1 }, { opts: ['כן', 'לא'], ok: 0 }] },
@@ -176,15 +481,51 @@ registerGame({
         { label: 'גודש בכבד ונפיחות בטנית', why: 'הוורידים מהבטן מתגודדים כשהצד הימני נכשל.', cells: [{ opts: ['כן', 'לא'], ok: 1 }, { opts: ['כן', 'לא'], ok: 0 }] },
         { label: 'בלבול עקב אספקה לקויה של דם מחומצן למוח', why: 'הצד השמאלי מזרים דם עשיר בחמצן לגוף, כולל למוח.', cells: [{ opts: ['כן', 'לא'], ok: 0 }, { opts: ['כן', 'לא'], ok: 1 }] },
       ], onDone: done }) },
+      { title: 'איפה בגוף?', run: hfBody },
+      { title: 'קוראים ממצאים', run: runQuizStage([
+        Q('מטופל מגיע עם קוצר נשימה. בצילום החזה (בתמונה) רואים לב מוגדל ועכירות בריאות. מה המשמעות?', 'hf', [OK('בצקת ריאות: נוזל בריאות, כמו באי-ספיקה שמאלית', 'הלב מוגדל והדם נתקע בריאות, ולכן נוזל דולף אל הנאדיות.'), NO('צילום חזה תקין לגמרי', 'הלב מוגדל והריאות עכורות, ולכן אינו תקין.'), NO('דימום במוח', 'צילום חזה לא מראה את המוח, והתמונה היא של חזה.'), NO('אי-ספיקה ימנית בלבד, כי הריאות לא מושפעות', 'בכשל ימני הריאות לרוב נקיות. כאן הריאות עכורות.')], { vis: fig('xray_edema', 'צילום חזה') }),
+        Q('בבדיקה גופנית של מטופל רואים נפיחות בשתי הרגליים, ולחיצה משאירה שקע (בתמונה). לאיזה צד של הלב זה מתאים בעיקר?', 'hf', [OK('אי-ספיקה ימנית: הדם נתקע בגוף', 'נוזל נאגר ברקמות הרגליים כי הדם לא מפונה מהעלייה הימנית.'), NO('אי-ספיקה שמאלית בלבד: הדם נתקע בריאות', 'שמאלית גורמת בעיקר לבעיות בריאות.'), NO('אין קשר ללב: זו תמיד בעיה בכליות', 'בצקות כאלה יכולות לנבוע מהלב, ולכן בודקים.'), NO('היצרות בעורק הכלילי הימני בלבד', 'היצרות כלילית לא גורמת ישירות לבצקות.')], { vis: fig('exam_c9', 'בצקת ברגליים') }),
+        Q('באקו לב רואים חדר שמאלי מורחב עם דפנות דקות (בתמונה). מה המשמעות?', 'hf', [OK('החדר השמאלי נחלש ולא מזרים כראוי: אי-ספיקה שמאלית', 'חדר מורחב ודק מתכווץ בצורה חלשה.'), NO('בריא לגמרי, כי חדר גדול הוא חזק יותר', 'בחדר מורחב עם דפנות דקות כוח ההתכווצות חלש.'), NO('מסתם אבי העורקים הפך לצר', 'זה ממצא אחר, והאקו כאן מדגים חדר גדול.'), NO('העלייה הימנית נחסמה בקריש', 'בתמונה רואים את החדר השמאלי.')], { vis: fig('echo_dilated', 'אקו לב') }),
+      ]) },
+      { title: 'מה הטיפול ולמה?', run: (box, done) => binGame(box, { tag: 'hf', buckets: ['מפנה נוזלים', 'מקל על הנשימה', 'מקטין עומס על הלב'], title: 'בחרו טיפול ואז לחצו על המטרה העיקרית שלו.', items: [
+        { t: 'תרופה משתנה', b: 0, why: 'מוציאה עודף נוזלים מהגוף, ומקלה על הגודש.' },
+        { t: 'הפחתת מלח בתזונה', b: 0, why: 'פחות מלח אומר פחות נוזלים בגוף ופחות גודש.' },
+        { t: 'ישיבה בתנוחה מוגבהת', b: 1, why: 'בישיבה הנוזל יורד אל בסיס הריאות והנשימה קלה יותר.' },
+        { t: 'חמצן במצב חמור', b: 1, why: 'משפר את החמצון כשהריאות מלאות בנוזל.' },
+        { t: 'ניטרוגליצרין (מרחיב כלי דם)', b: 2, why: 'מרחיב כלי דם ומקטין את העומס שעליו הלב עובד.' },
+        { t: 'חוסמי בטא', b: 2, why: 'מאטים את הלב ומפחיתים את העומס עליו.' },
+        { t: 'מעכבי ACE', b: 2, why: 'מורידים לחץ דם ומקלים על הלב.' },
+      ], onDone: done }) },
       { title: 'שאלות', run: runQuizStage([
-        Q('איזה מצב מוביל לבצקת ריאות חריפה?', 'hf', [OK('אי-ספיקה שמאלית חריפה בלב', 'הדם עומד בכלי הריאה, ונוזל דולף אל הנאדיות ופוגע בחילוף הגזים.'), NO('אי-ספיקה ימנית, שבה נוזלים מצטברים בקרסוליים', 'ימנית גורמת בעיקר לבצקות בגוף ולגודש בכבד.'), NO('היצרות קלה בעורק הכלילי הימני', 'לא נוצרת בצקת ריאות מהיצרות כזו בלבד.'), NO('ירידה בדופק מתחת ל-60', 'דופק איטי אינו גורם ישיר לבצקת ריאות.')]),
+        Q('מדוע אי-ספיקה שמאלית גורמת לקוצר נשימה ולא לבצקות ברגליים?', 'hf', [OK('הדם שלא מפונה מהחדר השמאלי נתקע בדרכו חזרה מהריאות, ולכן נוזל מצטבר בהן', 'הריאות הן התחנה שלפני החדר השמאלי, ולכן שם נוצר הגודש.'), NO('כי הרגליים רחוקות מהלב ולכן הדם לא מגיע אליהן', 'הדם מגיע לכל הגוף. ההבדל הוא איפה הוא נתקע.'), NO('כי החדר השמאלי מזרים דם דל בחמצן אל הרגליים', 'החדר השמאלי מזרים דם עשיר בחמצן.'), NO('כי בצקות ברגליים נוצרות רק מאכילת מלח', 'מלח מחמיר, אבל הגורם ללב הוא איפה הדם נתקע.')]),
+        Q('מדוע אי-ספיקה שמאלית ממושכת עלולה להוביל לאחר זמן גם לכשל ימני?', 'hf', [OK('הלחץ הגבוה בכלי הריאה מעמיס על החדר הימני, ובסוף גם הוא נחלש', 'לכן בפועל הפגיעה לרוב משולבת, כפי שכתוב בספר.'), NO('כי החדר הימני מפסיק לקבל דם מהעלייה הימנית', 'הוא ממשיך לקבל, אבל מתקשה לדחוף אל הריאות הגודשות.'), NO('כי החדר השמאלי מעביר ישירות את הנוזל אל החדר הימני דרך המחיצה', 'המחיצה מפרידה בין הצדדים.'), NO('אין קשר בין צדי הלב, ולכן אי אפשר שזה יקרה', 'הצדדים קשורים דרך מחזור הריאות.')]),
+        Q('מדוע מושיבים בתנוחה מוגבהת מטופל באי-ספיקת לב עם נוזל בריאות?', 'hf', [OK('כדי להקל על הנשימה, כי בישיבה הנוזל יורד אל החלקים התחתונים של הריאות', 'בשכיבה שטוחה הגודש מחמיר את הקוצר, ובישיבה הנוזל יורד.'), NO('כדי להעלות את לחץ הדם הנמוך', 'התנוחה לא מעלה לחץ דם.'), NO('כדי להקל על כאבי גב', 'התנוחה נועדה להקל על הנשימה.'), NO('כדי להגדיל את זרימת הדם אל הרגליים', 'זו אינה מטרת התנוחה.')]),
+        Q('מדוע אנמיה (המוגלובין נמוך) מעמיסה על הלב, ועלולה להחמיר אי-ספיקה?', 'hf', [OK('המוגלובין נמוך נושא פחות חמצן, והלב מואץ כדי לפצות', 'הדופק עולה כדי לפצות על חוסר חמצן, וזה מעמיס על לב חלש.'), NO('המוגלובין נמוך מאט את הלב ומקטין את העומס עליו', 'להפך: הלב מואץ.'), NO('המוגלובין נמוך מעלה את כמות החמצן שמגיעה לרקמות', 'פחות המוגלובין, פחות חמצן.'), NO('המוגלובין נמוך אינו משפיע על הלב ועל הדופק כלל', 'האנמיה מעמיסה על הלב ועלולה לגרום לתעוקה.')]),
         Q('מדוע יתר לחץ דם ממושך עלול להוביל לאי-ספיקת לב?', 'hf', [OK('הלב עובד נגד התנגדות והשריר מתעבה', 'עיבוי דופן החדר מונע התרחבות ומילוי טובים: אי-ספיקה דיאסטולית.'), NO('הלב משתחרר מעומס, ולכן הוא מתנוון ומאבד כוח', 'הלחץ הגבוה מגדיל את העומס, ולא מקטין אותו.'), NO('הכליליים נעשים רחבים מדי ומורידים זרימה', 'עורקים נעשים צרים, לא רחבים.'), NO('הדם נעשה נוזלי מדי ואינו מגיע לריאות', 'צמיגות הדם אינה המנגנון.')]),
-        Q('איזו תרופה מפחיתה את הנוזלים שהצטברו בנאדיות הריאה?', 'drugs', [OK('תרופה משתנת בעירוי', 'משתנים מזרזים הוצאת עודף נוזלים מהגוף.'), NO('סטטינים להורדת כולסטרול', 'הם מורידים כולסטרול, לא נוזלים.'), NO('אספירין', 'הוא מונע היצמדות טסיות.'), NO('מורפין להקלת כאב', 'משמש להקלת כאב, לא להוצאת נוזלים.')]),
-        Q('מהו כחלון (Cyanosis), ומה הוא מעיד?', 'hf', [OK('גוון כחלחל של העור והשפתיים, שמעיד על חוסר חמצן בדם', 'הוא מופיע כשרמת החמצן בדם נמוכה, למשל בבצקת ריאות או באי-ספיקת לב קשה.'), NO('גוון צהוב של העור, שמעיד על פגיעה בכבד', 'זו צהבת ולא כחלון.'), NO('אדמומיות של הפנים, שמעידה על לחץ דם נמוך', 'אדמומיות אינה כחלון.'), NO('חיוורון של העור, שמעיד על איבוד דם בלבד', 'חיוורון הוא ממצא אחר.')]),
       ]) },
     ]);
   },
 });
+
+/* ---------- יתר לחץ דם: נזק מצטבר באברי המטרה לאורך השנים ---------- */
+function htnYears(box, done) {
+  const host = el('<div class="card"></div>'); box.appendChild(host);
+  let years = 10, mode = 1;
+  const MODES = [['לחץ דם תקין', .15], ['גבוה ומטופל', .6], ['גבוה ולא מטופל', 2.4]];
+  const ORG = [['🧠', 'מוח', 'סיכון לאירוע מוחי', 1.0], ['❤️', 'לב', 'התעבות שריר ואי-ספיקה', 1.2], ['🫘', 'כליות', 'פגיעה בכליות', .9], ['👁️', 'עיניים', 'פגיעה ברשתית', .8], ['🦵', 'עורקי הגפיים', 'צליעה', .7]];
+  function draw() {
+    host.innerHTML = `<p class="instr">הנזק של לחץ דם גבוה מצטבר בשקט. בחרו מצב וכמה שנים עוברות, וראו איך הסיכון באברי המטרה משתנה.</p>
+      <div class="row" style="flex-wrap:wrap;gap:6px">${MODES.map((m, k) => `<button class="btn ${k === mode ? 'primary' : ''}" data-m="${k}">${m[0]}</button>`).join('')}</div>
+      <div class="sl"><label>שנים: <b>${years}</b></label><input type="range" id="syr" min="0" max="25" value="${years}"></div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px">${ORG.map(o => { const v = Math.min(100, Math.round(years * MODES[mode][1] * o[3] * 4)); const col = v < 30 ? '#4caf7a' : v < 60 ? '#f0ab2e' : '#d83a4a'; return `<div><div style="display:flex;justify-content:space-between"><span>${o[0]} <b>${o[1]}</b> <span class="small muted">${o[2]}</span></span><b>${v}%</b></div><div style="background:#f0e4e0;border-radius:8px;height:12px;overflow:hidden"><div style="width:${v}%;height:100%;background:${col};transition:width .4s"></div></div></div>`; }).join('')}</div>
+      <div class="explain ${mode === 2 && years >= 8 ? 'bad' : 'good'}" style="margin-top:8px">${mode === 2 ? 'בלחץ גבוה שלא מטופל הנזק מצטבר מהר, ולרוב אין תסמינים שמזהירים.' : mode === 1 ? 'טיפול ומעקב מאטים מאוד את הנזק. לכן חשוב לא להפסיק טיפול על דעת עצמנו.' : 'בלחץ תקין הנזק מצטבר לאט, בקצב של הגיל.'}</div>
+      <div class="small muted">המספרים להמחשה בלבד, כדי להראות את העיקרון: הנזק מצטבר עם השנים ומשתנה לפי הטיפול.</div><button class="btn primary block" id="hgo" style="margin-top:10px">המשך ←</button>`;
+    $('#syr', host).oninput = e => { years = +e.target.value; draw(); $('#syr', host).focus(); };
+    $$('[data-m]', host).forEach(b => b.onclick = () => { mode = +b.dataset.m; draw(); });
+    $('#hgo', host).onclick = () => done(100);
+  }
+  draw();
+}
 
 /* ---------- יתר לחץ דם ---------- */
 registerGame({
@@ -194,7 +535,7 @@ registerGame({
     'ברוב המקרים אין תסמינים, ולכן הוא "הרוצח השקט". הוא פוגע באברי מטרה: מוח (אירוע מוחי), לב (אוטם, אי-ספיקה), כליות, עיניים וכלי דם היקפיים.',
     'יתר לחץ דם ראשוני (אידיופתי, ללא סיבה ידועה) או שניוני (מחלת כליות, גידול ביותרת הכליה, מום לב מולד, או תרופות וסמים כמו גלולות למניעת היריון, מסירי גודש וקוקאין). גורמי סיכון הפיכים: משקל, חוסר פעילות, עישון, מלח, תזונה דלה באשלגן, אלכוהול, מתח ומחלות כרוניות. בלתי הפיכים: גיל, מין ותורשה. הטיפול הראשוני: שינוי אורח חיים, ובמקרה הצורך תרופות (מעכבי ACE, משתנים ועוד).'
   ],
-  teacherNote: 'סעיף 4.3 בתוכנית וספר הקליניקה (פרק 4): טבלת דרגות הלחץ מובאת בדיוק מהספר. גורמי הסיכון: בלתי הפיכים (גיל, מין, תורשה) והפיכים (השמנה, חוסר פעילות, עישון, מלח, אלכוהול, מתח, מחלות כרוניות). בתוכנית: המאמר "יתר לחץ דם ראשוני בילדים ומתבגרים" לא נכלל, לפי הנחיית המורה. הערה: 110/70 כתקין ויעד מתחת ל-140/90 הם הערכים בתוכנית ובספר. בהנחיות בינלאומיות עדכניות היעד נמוך יותר (בערך 130/80). בלחץ דם בינוני (דרגה 2) מקובל בפועל להתחיל תרופות במקביל לשינוי אורח החיים, ואילו הספר מדגיש את אורח החיים כצעד ראשון.',
+  teacherNote: 'סעיף 4.3 בתוכנית וספר הקליניקה (פרק 4): טבלת דרגות הלחץ מובאת בדיוק מהספר. בשלב גורמי הסיכון יש גם קטגוריה "לא רלוונטי" (פריטים שאין להם קשר ליתר לחץ דם, חלקם הפיכים וחלקם בלתי הפיכים), ובשלב איברי המטרה יש איברים שאינם ברשימה. הוסיפו גם סימולציה של נזק מצטבר לאורך השנים (להמחשה בלבד). גורמי הסיכון: בלתי הפיכים (גיל, מין, תורשה) והפיכים (השמנה, חוסר פעילות, עישון, מלח, אלכוהול, מתח, מחלות כרוניות). בתוכנית: המאמר "יתר לחץ דם ראשוני בילדים ומתבגרים" לא נכלל, לפי הנחיית המורה. הערה: 110/70 כתקין ויעד מתחת ל-140/90 הם הערכים בתוכנית ובספר. בהנחיות בינלאומיות עדכניות היעד נמוך יותר (בערך 130/80). בלחץ דם בינוני (דרגה 2) מקובל בפועל להתחיל תרופות במקביל לשינוי אורח החיים, ואילו הספר מדגיש את אורח החיים כצעד ראשון.',
   mount(root, ctx) {
     root.insertAdjacentHTML('afterbegin', say('לחץ דם גבוה לא כואב, לא מגרד ולא מזהיר. בדיוק בגלל זה הוא מסוכן. בואו נלמד לזהות אותו.', 'wink'));
     runStages(root, ctx, [
@@ -205,7 +546,7 @@ registerGame({
         { e: '🩺', t: 'לחץ דם 168/104', b: 3, why: 'הטווח 160-179/100-109 הוא יתר לחץ דם בינוני (דרגה 2).' },
         { e: '🩺', t: 'לחץ דם 190/115', b: 4, why: '180/110 ומעלה הוא יתר לחץ דם חמור (דרגה 3).' },
       ], onDone: done }) },
-      { title: 'גורמי סיכון', run: (box, done) => binGame(box, { tag: 'htn', buckets: ['בלתי הפיכים', 'הפיכים'], title: 'בחרו גורם סיכון ואז לחצו על הקבוצה שמתאימה לו.', items: [
+      { title: 'גורמי סיכון', run: (box, done) => binGame(box, { tag: 'htn', buckets: ['בלתי הפיכים', 'הפיכים', 'לא רלוונטי'], title: 'בחרו פריט ואז לחצו על הקבוצה שמתאימה לו: גורם סיכון בלתי הפיך, גורם סיכון הפיך, או שאין לו קשר ליתר לחץ דם.', items: [
         { t: 'גיל מבוגר', b: 0, why: 'אי אפשר לשנות גיל.' },
         { t: 'תורשה במשפחה', b: 0, why: 'הגנטיקה קבועה.' },
         { t: 'מין', b: 0, why: 'מין הוא גורם קבוע (בגברים שכיח יותר, ובנשים עולה אחרי גיל המעבר).' },
@@ -217,25 +558,115 @@ registerGame({
         { t: 'מתח נפשי מתמשך', b: 1, why: 'אפשר להפחית מתח, וכך להקטין את הסיכון.' },
         { t: 'תזונה דלה באשלגן (מעט ירקות ופירות)', b: 1, why: 'תזונה עשירה באשלגן מסייעת להורדת הלחץ.' },
         { t: 'סוכרת או כולסטרול גבוה שאינם מאוזנים', b: 1, why: 'מחלות כרוניות הן גורם סיכון, ואיזון שלהן מקטין אותו.' },
+        { t: 'צבע עיניים', b: 2, why: 'אין לו כל קשר ללחץ הדם. (ואי אפשר לשנות אותו, אבל זה לא הופך אותו לגורם סיכון.)' },
+        { t: 'סוג דם', b: 2, why: 'סוג הדם אינו קשור ללחץ הדם.' },
+        { t: 'קוצר ראייה', b: 2, why: 'קוצר ראייה אינו גורם סיכון ליתר לחץ דם. (שינויים ברשתית ביתר לחץ דם הם תוצאה, ולא קוצר ראייה.)' },
+        { t: 'קטיעת גפה בעבר', b: 2, why: 'אירוע בלתי הפיך, אבל אינו גורם סיכון ליתר לחץ דם.' },
+        { t: 'חיסון נגד שפעת', b: 2, why: 'אינו קשור ללחץ הדם. אפשר לשנות אותו, אבל אינו גורם סיכון.' },
+        { t: 'נעילת נעליים צרות', b: 2, why: 'אינה קשורה ללחץ הדם.' },
+        { t: 'ציפורניים ארוכות', b: 2, why: 'אינן קשורות ללחץ הדם.' },
       ], onDone: done }) },
-      { title: 'פגיעה באברי מטרה', run: (box, done) => matchGame(box, { tag: 'htn', leftTitle: 'איבר', rightTitle: 'התוצאה האפשרית', pairs: [
+      { title: 'מי איבר מטרה?', run: (box, done) => binGame(box, { tag: 'htn', buckets: ['איבר מטרה של יתר לחץ דם', 'לא איבר מטרה'], title: 'בחרו איבר ואז לחצו על הקבוצה שמתאימה לו.', items: [
+        { t: 'מוח', b: 0, why: 'לחץ גבוה גורם לאירוע מוחי, איסכמי או המורגי.' },
+        { t: 'לב', b: 0, why: 'התעבות שריר, אוטם ואי-ספיקה.' },
+        { t: 'כליות', b: 0, why: 'כלי הדם בכליה נפגעים ואפשרית אי-ספיקה כרונית.' },
+        { t: 'עיניים (הרשתית)', b: 0, why: 'שינויים בכלי הדם ברשתית ופגיעה בראייה.' },
+        { t: 'עורקי הגפיים', b: 0, why: 'צליעה, ובהמשך חוסר יכולת ללכת.' },
+        { t: 'שיניים', b: 1, why: 'אין פגיעה ישירה בשיניים מיתר לחץ דם.' },
+        { t: 'עור הפנים (ויובש בעור)', b: 1, why: 'אין פגיעה אופיינית בעור מיתר לחץ דם.' },
+        { t: 'העצמות (צפיפות עצם)', b: 1, why: 'העצמות אינן איבר מטרה של יתר לחץ דם.' },
+      ], onDone: done }) },
+      { title: 'מה הנזק לכל איבר?', run: (box, done) => matchGame(box, { tag: 'htn', leftTitle: 'איבר', rightTitle: 'התוצאה האפשרית', pairs: [
         ['מוח', 'חסימה או דימום בעורק, שמסתיימים בשיתוק או בפגיעה בדיבור'],
         ['לב', 'התעבות השריר, אוטם ואי-ספיקה'],
         ['כליות', 'אי-ספיקה כרונית, ולפעמים צורך בדיאליזה'],
         ['עיניים', 'שינויים בכלי הדם ברשתית ופגיעה בראייה'],
         ['עורקי הגפיים', 'צליעה, ובהמשך חוסר יכולת ללכת'],
       ], onDone: done }) },
+      { title: 'שנים של לחץ גבוה', run: htnYears },
       { title: 'שאלות', run: runQuizStage([
         Q('מדוע יתר לחץ דם נקרא "הרוצח השקט"?', 'htn', [OK('כי לרוב אין תסמינים והנזק מצטבר בשקט', 'כאבי ראש וסחרחורות מופיעים בדרך כלל רק בשלב מתקדם מאוד.'), NO('כי הוא מופיע רק בלילה בזמן שינה', 'אין קשר לשעות היממה.'), NO('כי הוא גורם למוות מיידי בכל מקרה', 'זה לא נכון. הנזק מתפתח לאורך שנים.'), NO('כי הוא תמיד מלווה בכאבי ראש חזקים', 'ברוב החולים אין תסמינים.')]),
         Q('איזה מהבאים מתאר יתר לחץ דם שניוני?', 'htn', [OK('לחץ דם גבוה שנובע ממחלת כליות או מתרופה מסוימת', 'בשניוני יש סיבה מוגדרת, למשל כליות, בלוטות אנדוקריניות או תרופות.'), NO('לחץ דם גבוה ללא סיבה ידועה שהתפתח לאורך שנים', 'זה יתר לחץ דם ראשוני (אידיופתי).'), NO('לחץ דם גבוה זמני רק בזמן מדידה בבית חולים', 'זה תיאור אחר, וזו אינה ההגדרה של שניוני.'), NO('לחץ דם נמוך מהרגיל אחרי אוטם', 'נמוך אינו יתר לחץ דם.')]),
         Q('מהו הטיפול הראשוני ביתר לחץ דם בלי סיבוכים?', 'htn', [OK('שינוי אורח חיים: משקל, פעילות ומלח', 'רק אם זה לא מספיק, במטופלים בסיכון גבוה מוסיפים תרופות.'), NO('ניתוח מעקפים כצעד ראשון בכל מקרה', 'ניתוח אינו טיפול ראשוני בלחץ דם.'), NO('אשפוז ממושך ומנוחה מוחלטת', 'מנוחה כזו אינה טיפול מקובל.'), NO('הפסקה מוחלטת של כל פעילות גופנית', 'פעילות גופנית מסייעת, לא מזיקה.')]),
         Q('איזה זוג גורמי סיכון ליתר לחץ דם הוא הפיך (אפשר לשנות)?', 'htn', [OK('צריכה רבה של אלכוהול ותזונה דלה באשלגן', 'אפשר להפחית אלכוהול ולשפר את התזונה, ולכן אלה גורמי סיכון הפיכים.'), NO('גיל מבוגר ותורשה של יתר לחץ דם במשפחה', 'אי אפשר לשנות גיל ותורשה.'), NO('מין גברי ותורשה של יתר לחץ דם במשפחה', 'שניהם קבועים.'), NO('תורשה ומשקל הלידה של התינוק עצמו', 'תורשה אינה הפיכה.')]),
         Q('איזה מהבאים עלול לגרום ליתר לחץ דם שניוני?', 'htn', [OK('גידול ביותרת הכליה, מחלת כליות או תרופות כמו גלולות', 'בשניוני יש סיבה מוגדרת: מחלה (כליות, יותרת הכליה, מום לב מולד) או תרופות וסמים.'), NO('אכילת מלח מרובה לאורך שנים, בלי מחלת רקע אחרת בגוף', 'זה גורם סיכון לראשוני.'), NO('חוסר פעילות גופנית והשמנה בלבד, בלי מחלת רקע כלשהי', 'זה גורם סיכון לראשוני.'), NO('תורשה של יתר לחץ דם במשפחה בלבד, בלי כל מחלה אחרת', 'תורשה היא גורם סיכון בלתי הפיך, ולא סיבה מוגדרת לשניוני.')]),
+        Q('מדוע מסוכן להפסיק טיפול נגד לחץ דם על דעת עצמך, רק כי הלחץ התייצב?', 'htn', [OK('כי הלחץ חוזר לעלות והנזק לאברי המטרה מצטבר בשקט', 'הלחץ תקין בזכות התרופה. כשמפסיקים, הוא חוזר, ואין תסמינים שמזהירים.'), NO('כי התרופה יוצרת תלות שגורמת לנזק כשמפסיקים', 'אין תלות כזו. הבעיה היא חזרת הלחץ הגבוה.'), NO('כי לחץ דם תקין מעיד שהמחלה חלפה לגמרי', 'המחלה כרונית ואינה נעלמת.'), NO('כי הפסקה פוגעת רק בכבד ולא בלב', 'הנזק הוא בלב, בכליות, במוח ובעיניים.')]),
+        Q('מהי מניעה ראשונית ביתר לחץ דם אצל אדם שעדיין לא חלה?', 'htn', [OK('הפחתת משקל, פעילות גופנית קבועה ותזונה דלה במלח', 'אלה גורמי סיכון הפיכים, ואפשר לטפל בהם לפני שהמחלה מתפתחת.'), NO('נטילת תרופות להורדת לחץ דם רק אחרי אירוע לבבי', 'זה אחרי המחלה, ולא מניעה ראשונית.'), NO('הימנעות מבדיקות רפואיות כדי לא להילחץ', 'בדיקות שגרתיות מזהות מוקדם.'), NO('מנוחה מוחלטת בלי פעילות גופנית', 'חוסר פעילות הוא גורם סיכון.')]),
+        Q('מהי מניעה שניונית אחרי שהתגלה יתר לחץ דם?', 'htn', [OK('טיפול ומעקב קבועים: תרופות ומדידות לחץ אצל הרופא', 'המטרה היא למנוע סיבוכים בלב, בכליות ובמוח.'), NO('מניעת עישון אצל ילדים ובני נוער שטרם ניסו עישון', 'זו מניעה ראשונית.'), NO('השתלת לב מיד כשהמחלה מתגלה בבדיקה הראשונה', 'זה אינו טיפול ביתר לחץ דם.'), NO('הפסקת תרופות מיד אחרי שנה של לחץ דם תקין', 'הפסקה עלולה להחזיר את הלחץ הגבוה.')]),
         Q('מהי היפרטרופיה של שריר החדר השמאלי, ומדוע היא נפוצה ביתר לחץ דם?', 'htn', [OK('התעבות שריר החדר השמאלי, כי הוא פועל מול התנגדות גבוהה', 'שריר שעובד קשה מתעבה, כמו שריר בכושר, אבל בלב זה מזיק בהמשך.'), NO('התרחבות דקה של החדר הימני בגלל מחסור כרוני בדם', 'היפרטרופיה היא התעבות, והיא בחדר השמאלי.'), NO('הצטברות שומן בדפנות מסתם אבי העורקים בגיל מבוגר', 'זה אינו היפרטרופיה של השריר.'), NO('התנוונות שריר החדר השמאלי בגלל עומס נמוך לאורך זמן', 'העומס גבוה, והשריר מתעבה.')]),
       ]) },
     ]);
   },
 });
+
+/* ---------- אירוע מוחי: אנימציה של איסכמי מול המורגי ---------- */
+function cvaSim(box, done) {
+  const host = el('<div class="card"></div>'); box.appendChild(host);
+  const T = {
+    isch: ['אירוע איסכמי: קריש חוסם עורק', 'קריש (או תסחיף מהלב) נתקע בעורק במוח, והאזור שאחריו לא מקבל דם עשיר בחמצן ומתחיל לקרוס.', 'ct_ischemic', 'CT: אזור כהה בדופן המוח'],
+    hem: ['אירוע המורגי: עורק נקרע', 'עורק במוח נקרע (לרוב בגלל יתר לחץ דם או מפרצת), והדם דולף אל הרקמה ולוחץ עליה.', 'ct_hemorrhage', 'CT: אזור לבן בהיר: דימום'],
+  };
+  const seen = new Set(); let raf = 0, kind = null, busy = false;
+  host._bot = () => { if (busy) return false; const k = ['isch', 'hem'].find(x => !seen.has(x)); if (!k) return false; $(`[data-k="${k}"]`, host).click(); return true; };
+  host.innerHTML = `<p class="instr">בחרו סוג אירוע וראו מה קורה בעורק ובמוח, ומה רואים בגוף ובבדיקה.</p>
+    <svg viewBox="0 0 300 200" class="co-svg" role="img" aria-label="אנימציה של אירוע מוחי איסכמי או המורגי">
+      <ellipse cx="150" cy="96" rx="118" ry="82" fill="#f6d8d2" stroke="#b86a63" stroke-width="3"/>
+      <path d="M150,190 V120 Q150,92 190,80 M150,120 Q150,95 110,84" stroke="#d83a4a" stroke-width="9" fill="none" stroke-linecap="round"/>
+      <ellipse id="czone" cx="200" cy="70" rx="42" ry="34" fill="#4a4f66" opacity="0"/>
+      <circle id="cclot" cx="150" cy="188" r="0" fill="#7a0f24" stroke="#fff" stroke-width="2.5"/>
+      <circle id="cbleed" cx="190" cy="82" r="0" fill="#b01030" opacity=".92"/>
+    </svg>
+    <div class="row" style="flex-wrap:wrap;gap:6px;margin:6px 0"><button class="btn" data-k="isch">${T.isch[0]}</button><button class="btn" data-k="hem">${T.hem[0]}</button></div>
+    <div class="explain" id="ctx">בחרו אחד מהאירועים.</div>
+    <div id="cfig"></div>
+    <button class="btn primary block" id="cgo" style="margin-top:10px" disabled>המשך ←</button>`;
+  const clot = $('#cclot', host), bleed = $('#cbleed', host), zone = $('#czone', host);
+  function run(k) {
+    cancelAnimationFrame(raf); kind = k; clot.setAttribute('r', 0); bleed.setAttribute('r', 0); zone.setAttribute('opacity', 0); $('#cfig', host).innerHTML = '';
+    busy = true; $('#ctx', host).innerHTML = 'מה קורה...'; const st = performance.now(), dur = animMs(3000);
+    if (window.__fast) { finish(k); return; }
+    const f = now => {
+      const p = Math.min(1, (now - st) / dur);
+      if (k === 'isch') { const q = Math.min(1, p / .6); clot.setAttribute('r', 9); clot.setAttribute('cx', 150 + (q > .7 ? (q - .7) / .3 * 40 : 0)); clot.setAttribute('cy', 188 - q * 108 + (q > .7 ? 0 : 0)); if (p > .6) zone.setAttribute('opacity', (Math.min(1, (p - .6) / .4) * .55).toFixed(2)); }
+      else { if (p > .3) bleed.setAttribute('r', (Math.min(1, (p - .3) / .5) * 30).toFixed(1)); }
+      if (p < 1 && host.isConnected) raf = requestAnimationFrame(f); else finish(k);
+    };
+    raf = requestAnimationFrame(f);
+  }
+  function finish(k) {
+    busy = false; seen.add(k);
+    const side = 'הפגיעה בצד אחד של המוח משתקת או מחלישה את הצד <b>הנגדי</b> של הגוף (Hemiplegia או Hemiparesis), ויכולים להופיע צניחת זווית הפה והפרעת דיבור (Aphasia).';
+    $('#ctx', host).innerHTML = `<b>${T[k][0]}:</b> ${T[k][1]}<div style="margin-top:6px">${side}</div>`;
+    $('#cfig', host).innerHTML = ART[T[k][2]] ? `<figure class="fig" style="max-width:280px;margin:8px auto"><img src="${ART[T[k][2]]}" alt="${T[k][3]}"><figcaption>${T[k][3]} (לחצו להגדלה)</figcaption></figure>` : '';
+    if (seen.size === 2) $('#cgo', host).disabled = false;
+  }
+  $$('[data-k]', host).forEach(b => b.onclick = () => run(b.dataset.k));
+  $('#cgo', host).onclick = () => { cancelAnimationFrame(raf); done(100); };
+}
+
+/* ---------- טרשת בגוף שלם: לוחצים על האיבר באיור עצמו ---------- */
+function bodyHotspots(box, done) {
+  const O = [
+    ['👁️', 'עיניים', 'שינויים בעורקי הרשתית בגלל יתר לחץ דם וסוכרת, שעלולים לפגוע בראייה.', 32.4, 5.5],
+    ['🧠', 'מוח (עורקי הצוואר)', 'פגיעה בעורקי הצוואר והמוח או תסחיף מהלב: אירוע מוחי איסכמי או המורגי, ואירוע חולף (TIA).', 34.8, 14.7],
+    ['❤️', 'לב', 'פגיעה בעורקים הכליליים: תעוקת חזה, אוטם שריר הלב, אי-ספיקת לב והפרעות קצב.', 38, 29],
+    ['🩸', 'אבי העורקים', 'התרחבות חולנית של הדופן (מפרצת אבי העורקים), שעלולה להיקרע ולגרום לדימום מסכן חיים.', 29.6, 38],
+    ['🫘', 'כליות', 'פגיעה בכלי הדם של הכליות: אי-ספיקת כליות כרונית. גם יתר לחץ דם וסוכרת פוגעים בכליות.', 38.3, 41.3],
+    ['🦵', 'עורקי הגפיים', 'חסימה של כלי דם היקפיים: צליעה בהליכה ובהמשך חוסר יכולת ללכת.', 41.1, 74],
+  ];
+  const seen = new Set(), host = el('<div class="card"></div>'); box.appendChild(host);
+  host._bot = () => { const b = $('[data-o]:not(.ok)', host); if (!b) return false; b.click(); return true; };
+  function draw(sel) {
+    const big = seen.size === 0;
+    host.innerHTML = `<p class="instr">לחצו על כל נקודה בגוף כדי לראות מה קורה שם (${seen.size} מתוך ${O.length}).</p>
+      <div class="lg-wrap" style="max-width:${big ? 360 : 270}px"><img src="${ART.body_athero}" alt="מקומות נפוצים לטרשת עורקים בגוף" draggable="false">${O.map((o, i) => `<button class="lg-dot ${seen.has(i) ? 'ok' : ''}" data-o="${i}" style="left:${o[3]}%;top:${o[4]}%" aria-label="${o[1]}">${seen.has(i) ? '✓' : ''}</button>`).join('')}</div>
+      ${sel != null ? `<div class="explain good" style="margin-top:10px"><b>${O[sel][0]} ${O[sel][1]}</b><div>${O[sel][2]}</div></div>` : ''}
+      <button class="btn primary block" id="gonx" style="margin-top:10px" ${seen.size < O.length ? 'disabled' : ''}>המשך ←</button>`;
+    $$('[data-o]', host).forEach(b => b.onclick = () => { seen.add(+b.dataset.o); draw(+b.dataset.o); });
+    $('#gonx', host).onclick = () => done(100);
+  }
+  draw();
+}
 
 /* ---------- אירוע מוחי ---------- */
 registerGame({
@@ -248,8 +679,8 @@ registerGame({
   teacherNote: 'סעיף 5.4 בתוכנית וספר הקליניקה (פרק 5): CVA איסכמי והמורגי, TIA, Hemiplegia, Hemiparesis, Aphasia, Aneurysm (מפרצת, כולל מפרצת אבי העורקים). הפגיעה בצד הגוף הנגדי לצד המוח הפגוע (ראה בספר). שלבים: התאמת מושגים, מיון, שאלות. הערה: ההגדרה של TIA (פחות מ-24 שעות) היא כפי שבספר. כיום מגדירים לפי היעדר נזק בהדמיה, בלי סף שעות קבוע.',
   mount(root, ctx) {
     root.insertAdjacentHTML('afterbegin', say('במוח, כל דקה בלי דם עולה במוחות. בואו נלמד את המילים של האירוע המוחי ונבדיל בין הסוגים.', 'think'));
-    root.insertAdjacentHTML('beforeend', artFigs([['ct_normal', 'CT מוח תקין'], ['ct_ischemic', 'אירוע איסכמי: אזור כהה'], ['ct_hemorrhage', 'דימום: אזור לבן בהיר']], 'כך נראה CT מוח (לחצו להגדלה):'));
     runStages(root, ctx, [
+      { title: 'מה קורה במוח?', run: cvaSim },
       { title: 'מה המושג?', run: (box, done) => matchGame(box, { tag: 'cva', leftTitle: 'מושג', rightTitle: 'הסבר', pairs: [
         ['אירוע מוחי איסכמי', 'קריש או תסחיף שחוסם עורק במוח'],
         ['אירוע מוחי המורגי', 'קריעה של עורק במוח ודימום אל הרקמה'],
@@ -262,7 +693,7 @@ registerGame({
       { title: 'שאלות', run: runQuizStage([
         Q('אדם עם פרפור פרוזדורים מפתח לפתע חולשה בצד ימין של הגוף. מהו הסוג הסביר ביותר של האירוע?', 'cva', [OK('אירוע מוחי איסכמי, בגלל קריש שנסחף מהלב אל המוח', 'פרפור פרוזדורים גורם ליצירת קרישים בעלייה שמאלית.'), NO('אירוע מוחי המורגי, כי קריש מהלב אינו מגיע למוח', 'קריש מהלב נישא בעורקים אל המוח וחוסם אותם. דימום נגרם מקריעת עורק.'), NO('התקף לב עם הרמת ST, שפוגע בצד ימין בלבד', 'חולשת צד אחד בגוף היא סימן נוירולוגי.'), NO('הרעלת מזון שגורמת למחסור באשלגן', 'התסמינים לא מתאימים לכך.')]),
         Q('איזה מבין הבאים הוא גורם הסיכון הנפוץ ביותר לאירוע מוחי המורגי?', 'cva', [OK('יתר לחץ דם', 'הוא הגורם הנפוץ ביותר, בעיקר מעל גיל 45 עד 50.'), NO('כולסטרול HDL גבוה', 'HDL גבוה הוא מגן ולא גורם סיכון.'), NO('דופק איטי בזמן שינה', 'אינו גורם סיכון.'), NO('פעילות גופנית קלה פעם בשבוע', 'פעילות היא גורם מגן.')]),
-        Q('איזה בדיקה מקובלת לאבחון ראשוני לזיהוי דימום או אוטם במוח?', 'cva', [OK('CT מוח ללא חומר ניגוד', 'מדגים במהירות אוטמים או דימומים, ולכן נפוץ ביותר.'), NO('בדיקת שתן סטנדרטית', 'לא מזהה אירוע מוחי.'), NO('א.ק.ג של מנוחה בלבד', 'מאבחן בעיות בלב, לא נזק מוחי.'), NO('מבחן מאמץ על הליכון', 'מסוכן וללא תועלת באירוע מוחי חריף.')]),
+        Q('איזה בדיקה מקובלת לאבחון ראשוני לזיהוי דימום או אוטם במוח?', 'cva', [OK('CT מוח ללא חומר ניגוד', 'מדגים במהירות דימום, ואחר כך גם אוטם, ולכן הוא הבדיקה הראשונה והנפוצה ביותר באירוע חריף.'), NO('EEG', 'בודק את הפעילות החשמלית של המוח, ומתאים בעיקר לאפילפסיה. הוא אינו מזהה דימום או אוטם.'), NO('בדיקת שדה ראייה', 'בודקת את הראייה, ואינה מזהה דימום או אוטם במוח.'), NO('EMG', 'בודק פעילות חשמלית של שרירים ועצבים, ואינו מזהה דימום או אוטם במוח.')]),
         Q('בעקבות פגיעה בצד הימני של המוח, איפה תופיע החולשה בגוף?', 'cva', [OK('בצד שמאל של הגוף', 'כל צד של המוח שולט בצד הנגדי של הגוף.'), NO('בצד ימין של הגוף', 'השליטה היא בצד הנגדי.'), NO('בשני צדי הגוף באותה מידה', 'רוב האירועים פוגעים בצד אחד.'), NO('רק בפנים, ולא בגפיים', 'אפשר לפגוע בגפיים.')]),
       ]) },
     ]);
@@ -277,32 +708,66 @@ registerGame({
     'סוכרת פוגעת בכלי דם גדולים (מקרו-וסקולריים) ובכלי דם קטנים (מיקרו-וסקולריים), ומאיצה את הטרשת.',
     'מניעה וטיפול בגורמי הסיכון מגינים על כל האיברים יחד.'
   ],
-  teacherNote: 'מחבר בין סעיפים 3.1, 4.3, 5.1 ו-5.4 בתוכנית: טרשת עורקים ויתר לחץ דם כפוגעים באברי מטרה. הקטע האינטראקטיבי: לחיצה על איבר מציגה כרטיס. אין איור גוף אמיתי עדיין, ויתווסף בסבב האיורים.',
+  teacherNote: 'מחבר בין סעיפים 3.1, 4.3, 5.1 ו-5.4 בתוכנית: טרשת עורקים ויתר לחץ דם כפוגעים באברי מטרה. הקטע האינטראקטיבי: לוחצים על נקודות באיור הגוף עצמו וקוראים מה קורה בכל איבר.',
   mount(root, ctx) {
     root.insertAdjacentHTML('afterbegin', say('העורקים נמצאים בכל מקום, ולכן גם הנזק. לחצו על כל איבר כדי לראות מה קורה בו.', 'wink'));
-    root.insertAdjacentHTML('beforeend', artFigs([['body_athero', 'מקומות נפוצים לטרשת עורקים בגוף: צוואר, לב, כליות ורגליים']]));
     runStages(root, ctx, [
-      { title: 'האיברים', run: (box, done) => {
-        const O = [
-          ['❤️', 'לב', 'פגיעה בעורקים הכליליים: תעוקת חזה, אוטם שריר הלב, אי-ספיקת לב והפרעות קצב.'],
-          ['🧠', 'מוח', 'פגיעה בעורקי המוח או תסחיף מהלב: אירוע מוחי איסכמי או המורגי, ואירוע חולף (TIA).'],
-          ['🫘', 'כליות', 'פגיעה בכלי הדם של הכליות: אי-ספיקת כליות כרונית. גם יתר לחץ דם וסוכרת פוגעים בכליות.'],
-          ['👁️', 'עיניים', 'שינויים בעורקי הרשתית בגלל יתר לחץ דם וסוכרת, שעלולים לפגוע בראייה.'],
-          ['🦵', 'עורקי הגפיים', 'חסימה של כלי דם היקפיים: צליעה בהליכה ובהמשך חוסר יכולת ללכת.'],
-          ['🩸', 'אבי העורקים', 'התרחבות חולנית של הדופן (מפרצת אבי העורקים), שעלולה להיקרע ולגרום לדימום מסכן חיים.'],
-        ];
-        const seen = new Set(), host = el('<div class="card"></div>'); box.appendChild(host);
-        function draw(sel) {
-          host.innerHTML = `<p class="instr">לחצו על כל האיברים כדי לקרוא (${seen.size} מתוך ${O.length}).</p><div class="row" style="flex-wrap:wrap;gap:8px">${O.map((o, i) => `<button class="btn ${seen.has(i) ? '' : 'primary'}" data-o="${i}">${o[0]} ${o[1]}${seen.has(i) ? ' ✓' : ''}</button>`).join('')}</div>${sel != null ? `<div class="explain good" style="margin-top:10px"><b>${O[sel][0]} ${O[sel][1]}</b><div>${O[sel][2]}</div></div>` : ''}<button class="btn primary block" id="gonx" style="margin-top:10px" ${seen.size < O.length ? 'disabled' : ''}>המשך ←</button>`;
-          $$('[data-o]', host).forEach(b => b.onclick = () => { seen.add(+b.dataset.o); draw(+b.dataset.o); });
-          $('#gonx', host).onclick = () => done(100);
-        }
-        draw();
-      } },
+      { title: 'האיברים', run: bodyHotspots },
       { title: 'שאלות', run: runQuizStage([
         Q('איזה איבר נפגע על ידי היצרות של עורקי הכליה בגלל טרשת עורקים?', 'body', [OK('הכליות: אי-ספיקה כרונית', 'עורקי הכליה הם עורקים כמו אחרים, וגם הם נפגעים מטרשת.'), NO('הכבד, שמפסיק לייצר כולסטרול', 'הקשר אינו כזה.'), NO('הריאות, שמפסיקות לקבל חמצן', 'הריאות מקבלות דם מהמחזור הקטן.'), NO('השרירים, שמפסיקים להתכווץ', 'אין לכך קשר ישיר.')]),
         Q('מה האזהרה של "צליעה בהליכה" אצל אדם עם סוכרת ועישון?', 'body', [OK('חסימה של עורקים היקפיים בגפיים', 'השרירים בגפיים לא מקבלים מספיק חמצן במאמץ.'), NO('אי-ספיקת לב שמאלית חריפה', 'תתבטא אחרת: קוצר נשימה.'), NO('פרפור חדרים, שמסתיים בדום לב', 'אינו מתבטא בצליעה.'), NO('דלקת במסתם המיטרלי של הלב', 'אינה קשורה לצליעה.')]),
       ]) },
+    ]);
+  },
+});
+
+/* ---------- תחנת א.ק.ג: כל הרצועות במקום אחד (בסוף חלק המחלות) ---------- */
+const ECGDX = [
+  { k: 'sinus', name: 'קצב סינוס תקין', spec: { type: 'sinus', hr: 72 }, why: ECG_WHY.sinus + ' הקצב כאן כ-72 בדקה.', tx: 'תקין' },
+  { k: 'tachy', name: 'טכיקרדיה סינוסית', spec: { type: 'sinus', hr: 135 }, why: 'קצב סדיר עם גל P לפני כל QRS, אבל מעל 100 בדקה (כאן כ-135).', tx: 'דורש בירור: מה גורם לדופק המהיר' },
+  { k: 'brady', name: 'ברדיקרדיה סינוסית', spec: { type: 'sinus', hr: 45 }, why: 'קצב סדיר עם גל P לפני כל QRS, אבל מתחת ל-60 בדקה (כאן כ-45).', tx: 'דורש בירור: מה גורם לדופק האיטי' },
+  { k: 'af', name: 'פרפור פרוזדורים', spec: { type: 'af', hr: 110 }, why: ECG_WHY.af, tx: 'דורש טיפול: נוגד קרישה והאטת קצב' },
+  { k: 'vf', name: 'פרפור חדרים', spec: { type: 'vf', hr: 0 }, why: ECG_WHY.vf, tx: 'חירום: החייאה ודפיברילטור מיד' },
+  { k: 'ste', name: 'הרמה במקטע ST', spec: { type: 'ste', hr: 75 }, why: ECG_WHY.ste, tx: 'חירום: אוטם, מזעיקים עזרה' },
+  { k: 'std', name: 'ירידה במקטע ST', spec: { type: 'std', hr: 75 }, why: ECG_WHY.std, tx: 'דורש בירור דחוף: איסכמיה' },
+];
+const ecgStrip = (e, seed) => `<div class="card flat" style="padding:6px">${ecgTrace(Object.assign({ seed }, e.spec), { sec: 4, label: 'רצועת א.ק.ג' })}</div>`;
+registerGame({
+  id: 'a_ecgdx', part: 'A', sec: 'disease', icon: '📋', title: 'תחנת א.ק.ג: מזהים את הרצועה', desc: 'סינוס, טכיקרדיה, ברדיקרדיה, פרפורים והרמה או ירידה ב-ST: כל הרצועות במקום אחד',
+  learned: [
+    'קצב סינוס תקין: גל P לפני כל QRS והמרווחים שווים (60 עד 100). טכיקרדיה: מעל 100, ברדיקרדיה: מתחת ל-60.',
+    'פרפור פרוזדורים: אין גלי P והקצב לא סדיר. פרפור חדרים: תנודות כאוטיות ואין קומפלקסים, וזה דום לב.',
+    'הרמת ST מעידה על אוטם (STEMI). ירידת ST מעידה על איסכמיה, למשל בתעוקה או באוטם בלי הרמת ST.'
+  ],
+  teacherNote: 'מאגד את כל זיהוי הרצועות של חלק המחלות (במקום חזרה על אותן שלוש רצועות בכמה משחקים): סינוס, טכיקרדיה, ברדיקרדיה, פרפור פרוזדורים, פרפור חדרים, הרמת ST וירידת ST. שלבים: הכרת הרצועות, זיהוי בערבוביה (10 רצועות אקראיות), מיון לפי דחיפות. הרצועות נוצרות בקוד, ורצוי שקרדיולוג יאשר אותן.',
+  mount(root, ctx) {
+    root.insertAdjacentHTML('afterbegin', say('כאן מתאמנים על הכול ביחד: כל רצועה מספרת סיפור אחר על הלב. קודם מכירים, ואז מזהים בערבוביה.', 'wink'));
+    runStages(root, ctx, [
+      { title: 'מכירים את הרצועות', run: (box, done) => {
+        let i = 0; const host = el('<div class="card"></div>'); box.appendChild(host);
+        function draw() {
+          const e = ECGDX[i];
+          host.innerHTML = `<p class="instr">רצועה ${i + 1} מתוך ${ECGDX.length}</p>${ecgStrip(e, 41 + i * 5)}<div class="explain good"><b>${e.name}</b><div class="small">${e.why}</div><div class="small" style="margin-top:4px">מה עושים: ${e.tx}</div></div>
+            <div class="row" style="margin-top:8px"><button class="btn" id="eprev" ${i ? '' : 'disabled'}>→ הקודם</button><button class="btn primary grow" id="enext">${i < ECGDX.length - 1 ? 'הבאה ←' : 'לתרגול ←'}</button></div>`;
+          $('#eprev', host).onclick = () => { i--; draw(); };
+          $('#enext', host).onclick = () => { if (i < ECGDX.length - 1) { i++; draw(); } else done(100); };
+        }
+        draw();
+      } },
+      { title: 'מזהים בערבוביה', run: (box, done) => {
+        const order = shuffle(ECGDX.concat(shuffle(ECGDX).slice(0, 3)));
+        const items = order.map((e, j) => Q('איזו רצועה זו?', 'ecg_rhythm', shuffle([e, ...shuffle(ECGDX.filter(x => x !== e)).slice(0, 3)]).map(o => o === e ? OK(o.name, o.why) : NO(o.name, `לא זה. כאן: ${e.name}. ${e.why}`)), { vis: ecgStrip(e, 61 + j * 9) }));
+        runQuiz(box, { finish: p => done(p) }, items);
+      } },
+      { title: 'כמה דחוף?', run: (box, done) => binGame(box, { tag: 'ecg_rhythm', buckets: ['תקין', 'דורש בירור וטיפול', 'חירום מיידי'], title: 'בחרו ממצא ואז לחצו על רמת הדחיפות שלו.', items: [
+        { t: 'קצב סינוס תקין', b: 0, why: 'אין בעיה.' },
+        { t: 'טכיקרדיה סינוסית במנוחה', b: 1, why: 'צריך לברר את הסיבה (חום, אנמיה, כאב, חרדה ועוד).' },
+        { t: 'ברדיקרדיה סינוסית עם סחרחורת', b: 1, why: 'צריך לברר מה גורם לה, ואם היא מסכנת.' },
+        { t: 'פרפור פרוזדורים', b: 1, why: 'מצריך טיפול (נוגד קרישה והאטת קצב) כדי למנוע אירוע מוחי.' },
+        { t: 'ירידת ST בתעוקה', b: 1, why: 'סימן לאיסכמיה: מצריך בירור וטיפול.' },
+        { t: 'הרמת ST', b: 2, why: 'אוטם עם הרמת ST (STEMI): חירום, כל דקה חשובה.' },
+        { t: 'פרפור חדרים', b: 2, why: 'דום לב: החייאה והלם חשמלי מיד.' },
+      ], onDone: done }) },
     ]);
   },
 });

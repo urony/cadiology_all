@@ -10,7 +10,7 @@ window.__botRun = async function (only) {
   window.sortGame = function (r, s) { specs.sort.push(s); return O.sort.apply(this, arguments); };
   window.predictTable = function (r, s) { specs.pred.push(s); return O.pred.apply(this, arguments); };
   const txt = e => (e.textContent || '').replace(/\s+/g, ' ').trim();
-  const results = [];
+  const results = []; window.__fast = true;
   const ids = only ? [].concat(only) : GAMES.filter(g => !g.teacherOnly).map(g => g.id);
   for (const id of ids) {
     const g = gameById(id); const host = document.createElement('div'); document.body.appendChild(host);
@@ -22,6 +22,8 @@ window.__botRun = async function (only) {
       await sleep(5);
       let acted = false;
       const md = host.querySelector('.lg-mode'); if (md) { md.click(); acted = true; }
+      // 0) רכיבים מותאמים שחושפים פעולה נכונה (host._bot)
+      if (!acted) { for (const c of host.querySelectorAll('.card')) { if (c._bot && c._bot()) { acted = true; break; } } }
       // 1) תוויות על איור
       const chips = host.querySelectorAll('.lg-chip'); if (!acted && chips.length) {
         const c = chips[0], i = +c.dataset.c, d = host.querySelector(`.lg-dot[data-d="${i}"]`); c.click(); d.click(); acted = true;
@@ -74,7 +76,7 @@ window.__botRun = async function (only) {
       if (!acted) {
         if (host.querySelector('#nightnote')) { host.querySelector('[data-t="talk"]').click(); acted = true; }
         if (!acted && host.querySelector('[data-t="dx"]') && !host.querySelector('.mcq') && !host.querySelector('#startdx') === false) { host.querySelector('[data-t="dx"]').click(); }
-        const sel = ['#startdx', '#cnext', '#pgo', '#gonx', '#lg-next', '#go', '#nx'];
+        const sel = ['#startdx', '#cnext', '#pgo', '#gonx', '#lg-next', '#go', '#nx', '#gx', '#enext', '#hgo', '#cgo', '#ernx', '#hnx'];
         for (const s of (acted ? [] : sel)) { const b = host.querySelector(s); if (b && !b.disabled) { if (s === '#gonx' && host.querySelector('[data-o]')) continue; b.click(); acted = true; break; } }
         if (!acted && host.querySelector('[data-o]')) { const u = [...host.querySelectorAll('[data-o]')].find(b => !b.textContent.includes('✓')); if (u) { u.click(); acted = true; } else { const gx = host.querySelector('#gonx'); if (gx) { gx.click(); acted = true; } } }
         if (!acted) { const nb = [...host.querySelectorAll('button')].find(b => !b.disabled && /^(הבא ←|לסיכום 🏁|המשך ←|הצעד הבא ←|סיימתי, להמשיך ←|➡)/.test(txt(b))); if (nb) { nb.click(); acted = true; } }
@@ -85,6 +87,7 @@ window.__botRun = async function (only) {
     results.push({ id, pct: result, notes: notes.join(' | ') });
     host.remove();
   }
+  window.__fast = false;
   window.mcq = O.mcq; window.binGame = O.bin; window.sortGame = O.sort; window.predictTable = O.pred;
   return results;
 };

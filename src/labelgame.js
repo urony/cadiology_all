@@ -39,7 +39,7 @@ function labelGame(root, set, mode, onDone) {
   const imgHtml = set.svg ? set.svg : ART[set.img] ? `<img src="${ART[set.img]}" alt="${set.title}" draggable="false">` : `<div class="lg-fallback" style="aspect-ratio:${set.ratio}">האיור לא נטען. אפשר לשחק גם בלי: הנקודות מסמנות מקומות בתרשים.</div>`;
   const instr = typed ? `לחצו על נקודה ממוספרת, וכתבו את שם המבנה ${mode === 'type-en' ? 'באנגלית' : 'בעברית'}.` : 'גררו כל שם אל הנקודה המתאימה על האיור, או לחצו על שם ואז על הנקודה.';
   host.innerHTML = `<p class="instr">${instr}</p>
-    <div class="lg-wrap" style="max-width:${set.maxW}px">${imgHtml}${P.map((p, i) => `<button class="lg-dot ${typed ? 'num' : ''}" data-d="${i}" style="left:${p.x}%;top:${p.y}%" aria-label="נקודה ${i + 1}">${typed ? i + 1 : ''}</button>`).join('')}</div>
+    <div class="lg-wrap" style="max-width:${set.maxW}px">${imgHtml}${P.some(p => p.tx != null) ? `<svg class="lg-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${P.map(p => p.tx != null ? `<line x1="${p.x}" y1="${p.y}" x2="${p.tx}" y2="${p.ty}" vector-effect="non-scaling-stroke"/>` : '').join('')}</svg>` : ''}${P.map((p, i) => `<button class="lg-dot ${typed ? 'num' : ''}" data-d="${i}" style="left:${p.x}%;top:${p.y}%" aria-label="נקודה ${i + 1}">${typed ? i + 1 : ''}</button>`).join('')}</div>
     <div id="lg-type" class="lg-type" hidden></div>
     <div id="lg-fb" class="lg-fb" aria-live="polite"></div>
     <div class="lg-pool" id="lg-pool" ${typed ? 'hidden' : ''}>${shuffle(P.map((p, i) => i)).map(i => `<button class="lg-chip ${lang[i] === 'en' ? 'en' : ''}" data-c="${i}" ${lang[i] === 'en' ? 'dir="ltr"' : ''}>${nm(i)}</button>`).join('')}</div>

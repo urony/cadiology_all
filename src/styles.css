@@ -451,3 +451,29 @@ details.tpart[open]>summary::after{transform:rotate(-90deg)}
 /* מצב כהה: טקסט כהה על רקעים בהירים קבועים */
 .instr,.figlb,.rs-node,.rs-split>div,.bcard,.bcard.on{color:#1b2a38!important}
 .instr *,.bcard *{color:inherit}
+
+/* קווים דקים מהנקודה אל הקו בא.ק.ג, כדי שהנקודה לא תסתיר אותו */
+.lg-lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.lg-lines line{stroke:var(--primary-d,#8f1230);stroke-width:1.6;stroke-dasharray:3 2}
+/* מערכת ההולכה: איור עם סמן שנע */
+.cond-wrap{position:relative;max-width:430px;margin:6px auto;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}
+.cond-wrap img{display:block;width:100%;height:auto;user-select:none;-webkit-user-drag:none}
+.cond-dot{position:absolute;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:#cfd3dc;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);opacity:.0;transition:opacity .3s}
+.cond-dot.past{background:var(--primary,#c0334d);opacity:.9}
+.cond-dot.now{opacity:0}
+.cond-spark{position:absolute;transform:translate(-50%,-50%);width:26px;height:26px;border-radius:50%;background:#f0ab2e;border:3px solid #fff;box-shadow:0 0 0 3px rgba(240,171,46,.45),0 2px 8px rgba(0,0,0,.4);transition:left .9s ease,top .9s ease;animation:sparkp 1s infinite}
+@keyframes sparkp{50%{box-shadow:0 0 0 10px rgba(240,171,46,.15),0 2px 8px rgba(0,0,0,.4)}}
+@media (prefers-reduced-motion:reduce){.cond-spark{animation:none;transition:none}}
+
+/* סימולטור תפוקת לב: לב מונפש */
+.co-svg{display:block;width:100%;max-width:380px;margin:6px auto 10px;background:#fff8f7;border:1px solid var(--line);border-radius:14px}
+.co-size{transform:scale(var(--s,1));transform-box:fill-box;transform-origin:center}
+.co-beat{animation:cobeat var(--d,.86s) ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.co-drop{animation:codrop var(--d,.86s) linear infinite}
+@keyframes cobeat{0%,100%{transform:scale(1)}14%{transform:scale(1.14)}34%{transform:scale(.97)}}
+@keyframes codrop{0%{transform:translateX(0);opacity:0}6%{opacity:1}88%{opacity:1}100%{transform:translateX(138px);opacity:0}}
+@media (prefers-reduced-motion:reduce){.co-beat,.co-drop{animation:none}.co-drop{opacity:1}}
+
+/* אי-ספיקת לב: איברים שמצטבר בהם הדם */
+.hf-fx{opacity:0;transition:opacity .6s}
+.hf-fx.on{opacity:1}
