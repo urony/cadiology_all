@@ -145,7 +145,8 @@ const starsHTML = n => `<span class="stars" aria-label="${n} כוכבים">${[1,
 
 /* ===== שאלה אמריקאית (MCQ) – רכיב משותף ===== */
 function mcq(parent, spec) {
-  const letters = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', 'י'];
+  /* עד 10 אפשרויות: אותיות. יותר מזה: מספרים רגילים (1, 2, 3...), כדי שלא יופיע undefined */
+  const letters = spec.options.length > 10 ? spec.options.map((_, i) => String(i + 1)) : ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', 'י'];
   let opts = spec.options.map((o, i) => ({ ...o, _i: i }));
   if (spec.shuffle !== false) opts = shuffle(opts);
   const box = el(`<div class="mcq"></div>`);
