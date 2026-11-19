@@ -30,7 +30,7 @@ function updateTop(route) {
 
 const gameAllowed = g => !LOCK || ONLY.includes(g.part.toLowerCase()) || ONLY.includes(g.id.toLowerCase());
 const allowedParts = () => ['a', 'b', 'c'].filter(p => activeParts().includes(p.toUpperCase())).filter(p => GAMES.some(g => g.part.toLowerCase() === p && gameAllowed(g)));
-function gamesOfPart(p) { return GAMES.filter(g => g.part === p && gameAllowed(g) && (IS_TEACHER || !g.teacherOnly)); }
+function gamesOfPart(p) { return GAMES.filter(g => g.part === p && !g.embed && gameAllowed(g) && (IS_TEACHER || !g.teacherOnly)); }
 function nameCard(redraw) {
   return Store.d.name ? '' : `<div class="card"><h3>איך קוראים לך?</h3><p class="muted small">אפשר גם כינוי. השם נשמר רק במכשיר שלך, ונשלח למורה רק אם תלחצו על "שליחת תוצאות".</p><input type="text" id="nm" placeholder="שם או כינוי" maxlength="30" autocomplete="off"><div style="height:8px"></div><input type="text" id="cl" placeholder="כיתה (לא חובה)" maxlength="12" autocomplete="off"><button class="btn primary block" id="sv" style="margin-top:10px">נתחיל! 🚀</button></div>`;
 }
@@ -43,7 +43,7 @@ function home() {
   if (IS_TEACHER) { teacherPage(view()); return; }
   const hasName = !!Store.d.name;
   const prog = activeParts().map(k => ({ k, ...partProgress(k) }));
-  const next = GAMES.find(g => !g.teacherOnly && !Store.stars(g.id));
+  const next = GAMES.find(g => !g.teacherOnly && !g.embed && !Store.stars(g.id));
   view().innerHTML = `<div class="hero" style="${heroBg('rgba(168,32,62,.7),rgba(224,113,79,.5)')}">${mascot('wow')}<div><h1>${hasName ? 'היי ' + esc(Store.d.name) + '! 👋' : 'ברוכים הבאים למעבדת הלב'}</h1><p>לומדים על הלב וכלי הדם – דרך משחקים, אק"ג, חידות ותורנות מיון.</p></div></div>
     ${hasName ? '' : `<div class="card"><h3>איך קוראים לך?</h3><p class="muted small">אפשר גם כינוי. השם נשמר רק במכשיר שלך, ונשלח למורה רק אם תלחצו על "שליחת תוצאות".</p>
       <input type="text" id="nm" placeholder="שם או כינוי" maxlength="30" autocomplete="off"><div style="height:8px"></div><input type="text" id="cl" placeholder="כיתה (לא חובה)" maxlength="12" autocomplete="off">
@@ -106,6 +106,7 @@ function mePage() {
 function router() {
   const h = location.hash.replace(/^#\/?/, '') || 'home', [r, id] = h.split('/');
   window.scrollTo(0, 0);
+  { const eg = LOCK && r !== 'g' && r !== 'me' && GAMES.find(g => g.embed && ONLY.includes(g.id.toLowerCase())); if (eg) { location.replace('#/g/' + eg.id); return; } }
   if (LOCK) { const ap = allowedParts(), okG = r === 'g' && gameById(id) && gameAllowed(gameById(id)); if (!(r === 'me' || okG || ap.includes(r))) { location.replace('#/' + ap[0]); return; } }
   if (TGAME) { mountGame(BAKED, view()); return; }
   if (TPART && !(r === 'g' || r === BAKED)) { location.replace('#/' + BAKED); return; }

@@ -71,6 +71,12 @@ for (const p of PARTS_ON) {
     const h = makeHtml(im, ar, baked); fs.writeFileSync(path.join(pdir, name), h); n++; tot += h.length;
   }
 }
+/* ===== מטופל בודד להטמעה: game-c_p1..c_p10 (רק התמונות של אותו מטופל) ===== */
+{ const im = pick(imgAll, 'c', () => false), arC = pick(artAll, 'c', artExtra('c'));
+  for (let k = 1; k <= 10; k++) {
+    const ar = Object.fromEntries(Object.entries(arC).filter(([key]) => { const m = key.match(/^(patient_|exam_)c(d+)$/); return !m || +m[2] === k; }));
+    const h = makeHtml(im, ar, 'c_p' + k); fs.writeFileSync(path.join(pdir, 'game-c_p' + k + '.html'), h); n++; tot += h.length;
+  } }
 /* ===== קבצי מורה: teacher.html (הכול) ו-teacher-parts/teacher-game-<id>.html (משחק בודד, עם כל התשובות) ===== */
 fs.writeFileSync(path.join(root, 'dist/teacher.html'), makeHtml(imgAll, artAll, '', true));
 const tdir = path.join(root, 'dist/teacher-parts'); fs.rmSync(tdir, { recursive: true, force: true }); fs.mkdirSync(tdir, { recursive: true });

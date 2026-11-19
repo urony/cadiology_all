@@ -14,13 +14,13 @@ const GAME_TITLE = id => { const g = gameById(id); return g ? g.title : id; };
 const PART_ICON = { A: '📘', B: '🧪', C: '🚑' };
 function teacherPage(root) {
     const rows = TStore.d.rows;
-  const allG = GAMES.map(g => g.id);
+  const allG = GAMES.filter(g => !g.embed).map(g => g.id);
   const avgOf = r => { const v = Object.values(r.g).map(x => x[0]); return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : 0; };
   const mis = {}; rows.forEach(r => Object.keys(r.m || {}).forEach(k => mis[k] = (mis[k] || 0) + r.m[k]));
   const topMis = Object.entries(mis).sort((a, b) => b[1] - a[1]).slice(0, 8);
   const perGame = allG.map(id => { const v = rows.map(r => r.g[id] ? r.g[id][0] : null).filter(x => x != null); return { id, n: v.length, avg: v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null }; });
   const gameRow = g => `<div class="row sp" style="gap:8px;padding:8px 0;border-top:1px solid var(--line)"><div class="row" style="gap:10px;flex:1;min-width:0"><span style="font-size:1.6rem">${g.icon}</span><div style="min-width:0"><b>${g.title}</b>${g.teacherOnly ? ' <span class="pill">לשליחה למורה בלבד</span>' : ''}<div class="muted small">${g.desc}</div></div></div><button class="btn sm primary" data-g="${g.id}">👁️ תשובות</button></div>`;
-  const partCard = p => { const gs = GAMES.filter(g => g.part === p); return `<details class="card tpart"><summary><span>${PART_ICON[p]} חלק ${PARTS[p].l}: ${PARTS[p].t}</span><span class="pill">${gs.length} משחקים</span></summary><div style="margin-top:8px">${gs.map(gameRow).join('')}</div></details>`; };
+  const partCard = p => { const gs = GAMES.filter(g => g.part === p && !g.embed); return `<details class="card tpart"><summary><span>${PART_ICON[p]} חלק ${PARTS[p].l}: ${PARTS[p].t}</span><span class="pill">${gs.length} משחקים</span></summary><div style="margin-top:8px">${gs.map(gameRow).join('')}</div></details>`; };
   root.innerHTML = `<h1>🎓 דף מורה</h1>
     ${say('כל חלק (א׳, ב׳, ג׳) סגור בהתחלה כדי שלא תצטרכו לגלול. לוחצים על חלק כדי לראות את המשחקים שלו, ועל "תשובות" כדי לראות את הפתרון המלא. הקישורים לתלמידים נמצאים מתחת.', 'happy')}
     <div class="card" style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn primary grow" href="#/key">📋 מפתח תשובות מלא (להדפסה)</a><a class="btn grow" href="#results">📥 תוצאות תלמידים</a><a class="btn grow" href="#/certs">🎓 מחולל תעודות</a></div>
@@ -168,7 +168,7 @@ function certsPage(root) {
     <div class="card"><p class="small muted" style="margin-top:0">כותבים שם בכל שורה, בוחרים סוג תעודה ונושא, ומדפיסים. כל תלמיד מקבל עמוד משלו; בחלון ההדפסה אפשר לבחור "שמירה כ-PDF".</p>
       <label class="small"><b>שמות התלמידים</b> (שם בכל שורה)</label><textarea id="cnames" placeholder="נועה כהן&#10;דני לוי" style="min-height:110px">${esc(D.names || '')}</textarea>
       <label class="small"><b>סוג תעודה</b></label><select id="ckind"><option value="part">תעודת השתתפות</option><option value="done">תעודת סיום</option><option value="excel">תעודת הצטיינות</option></select>
-      <label class="small"><b>על מה?</b></label><select id="cwhat"><option value="">הכלי כולו (מעבדת הלב)</option>${GAMES.map(g => `<option value="${g.id}">${esc(g.title)}</option>`).join('')}</select>
+      <label class="small"><b>על מה?</b></label><select id="cwhat"><option value="">הכלי כולו (מעבדת הלב)</option>${GAMES.filter(g => !g.embed).map(g => `<option value="${g.id}">${esc(g.title)}</option>`).join('')}</select>
       <input type="text" id="cfree" placeholder="או נושא חופשי, למשל: שיעור קרדיולוגיה, פרק אק"ג (לא חובה)" maxlength="60" style="margin-top:6px">
       <div class="row" style="margin-top:6px;gap:8px"><input type="number" id="cpct" placeholder="ציון (לא חובה)" min="0" max="100" style="flex:1"><input type="text" id="csig" placeholder="שם החותם/ת, למשל: המורה דנה" maxlength="30" style="flex:2"></div>
       <label class="row small" style="margin-top:8px;gap:8px"><input type="checkbox" id="cdr" style="width:auto"> להוסיף "ד״ר" לפני השם</label></div>
@@ -204,5 +204,5 @@ function studentLinksCard() {
   return `<div class="card" id="slinks"><h2>🔗 קישורים לתלמידים</h2><p class="small muted" style="margin-top:0">קישורים לגרסת התלמיד (בלי תשובות ובלי כניסת מורה). מעתיקים ושולחים.</p>
     ${row('❤️ הכלי כולו', 'index.html')}${activeParts().map(p => row(PART_ICON[p] + ' חלק ' + PARTS[p].l + ' כולו', 'parts/part-' + p + '.html')).join('')}
     <details style="margin-top:8px"><summary><b>❓ שאלות רב-ברירה בלבד (לחזרה)</b></summary><p class="small muted">קישור שמציג לתלמיד רק את שאלות הרב-ברירה של הנושא, מעורבבות, בלי משחקים ואיורים. כל השאלות של הנושא, ב-20 בכל פעם.</p>${GAMES.filter(g => g.id.startsWith('a_mix')).map(g => row(g.icon + ' ' + g.title.replace('תרגול מעורב: ', ''), 'parts/game-' + g.id + '.html')).join('')}</details>
-    <details style="margin-top:8px"><summary><b>משחק בודד</b></summary>${GAMES.map(g => row(g.icon + ' ' + g.title.split(':')[0], 'parts/game-' + g.id + '.html')).join('')}</details></div>`;
+    <details style="margin-top:8px"><summary><b>משחק בודד</b></summary>${GAMES.filter(g => !g.embed).map(g => row(g.icon + ' ' + g.title.split(':')[0], 'parts/game-' + g.id + '.html')).join('')}</details></div>`;
 }

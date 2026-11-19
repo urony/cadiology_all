@@ -208,6 +208,14 @@ Object.values(SHIFTS).forEach(S => registerGame({
   mount(root, ctx) { runShift(root, ctx, S.ids, S.t0, { nocc: !!S.nocc }); },
 }));
 
+/* משחק של מטופל בודד, להטמעה בכלי חיצוני (embed:true: לא מופיע ברשימות, רק כקובץ נפרד dist/parts/game-c_pN.html) */
+CASES.forEach(c => registerGame({
+  id: ['c_p', c.id.slice(1)].join(''), part: 'C', embed: true, icon: '🚑', title: 'מטופל בודד: ' + c.name + ', ' + c.age, desc: 'מטופל אחד בחדר המיון: אנמנזה, בדיקה גופנית, בדיקות, אבחנה, סיבה וטיפול.',
+  learned: ['תמונה מלאה מורכבת מאנמנזה, בדיקה גופנית, א.ק.ג ובדיקות יחד, ולא ממדד אחד.'],
+  teacherNote: 'מטופל אחד מתוך משחקי משמרת. מיועד להטמעה בכלי חיצוני.',
+  mount(root, ctx) { runShift(root, ctx, [c.id], '21:00', {}); },
+}));
+
 /* זיכרון מטופלים שטופלו: נשמר במכשיר (localStorage) לפי משמרת, כדי שאפשר לצאת ולחזור */
 function seenLoad(key) { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { return null; } }
 function seenSave(key, list, results) { try { localStorage.setItem(key, JSON.stringify({ ids: list.map(c => c.id), res: results.map(r => r ? { pts: r.pts, dx: r.dx, cause: r.cause, tx: r.tx } : null) })); } catch (e) { } }
